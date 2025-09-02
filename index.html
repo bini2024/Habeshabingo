@@ -500,24 +500,29 @@
             }
         }
 
-        async function claimBingo() {
-            if (checkBingo()) {
-                const claimsRef = collection(db, 'bingoGames', gameId, 'claims');
-                try {
-                    await addDoc(claimsRef, {
-                        userId: userId,
-                        claimedAt: new Date(),
-                        card: gameCard
-                    });
-                    showModal('BINGO!', 'You have successfully claimed Bingo!');
-                } catch (error) {
-                    console.error("Error claiming bingo:", error);
-                    showModal('Error', `Failed to claim Bingo: ${error.message}`);
-                }
-            } else {
-                showModal('Not a Bingo!', 'Keep playing, you do not have Bingo yet!');
-            }
+        // Function to claim Bingo and save the card to Firestore
+async function claimBingo() {
+    if (checkBingo()) {
+        const claimsRef = collection(db, 'bingoGames', gameId, 'claims');
+        try {
+            // Flatten the 2D gameCard array into a 1D array
+            const flattenedCard = gameCard.flat();
+
+            await addDoc(claimsRef, {
+                userId: userId,
+                claimedAt: new Date(),
+                // Store the flattened array instead of the nested array
+                card: flattenedCard 
+            });
+            showModal('BINGO!', 'You have successfully claimed Bingo!');
+        } catch (error) {
+            console.error("Error claiming bingo:", error);
+            showModal('Error', `Failed to claim Bingo: ${error.message}`);
         }
+    } else {
+        showModal('Not a Bingo!', 'Keep playing, you do not have Bingo yet!');
+    }
+}
 
         async function endGame() {
             if (!isHost) return;
