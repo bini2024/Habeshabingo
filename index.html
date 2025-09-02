@@ -176,7 +176,7 @@
     </div>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, addDoc, setDoc, onSnapshot, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         setLogLevel('debug'); // For debugging Firestore operations
@@ -196,13 +196,11 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Replace this with the actual User ID you want to authorize to create games.
-        // You can get this ID from the 'User ID' displayed on the screen after you log in anonymously.
+        // This is the specific User ID that is authorized to create new games.
+        // It's the ID you provided.
         const AUTHORIZED_HOST_ID = "VFrxu78sMCRCLnLoygGUBTGxXTG3";
 
         let userId = null;
-        const appId = 'habeshabingo-f5a04'; // Use projectId as appId for consistency
-        const initialAuthToken = null; // Set to null since not provided
 
         // --- UI Element References ---
         const loadingSpinner = document.getElementById('loading-spinner');
@@ -351,8 +349,6 @@
                 lastCalledNumberDisplay.textContent = '--';
                 lastCalledNumberPlayerDisplay.textContent = '--';
             }
-            // IMPORTANT: Removed the automatic marking logic here
-            // The player must now click the numbers themselves.
         }
 
         // --- Firebase Integration ---
@@ -591,11 +587,17 @@
             try {
                 await signInAnonymously(auth);
                 userId = auth.currentUser.uid;
-                authInfo.textContent = `User ID: ${userId}`;
-                if (userId !== AUTHORIZED_HOST_ID) {
-                    createGameBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                
+                if (userId === AUTHORIZED_HOST_ID) {
+                    authInfo.textContent = `You are the host! User ID: ${userId}`;
+                    createGameBtn.disabled = false;
+                    createGameBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                } else {
+                    authInfo.textContent = `Welcome, Player!`;
                     createGameBtn.disabled = true;
+                    createGameBtn.classList.add('opacity-50', 'cursor-not-allowed');
                 }
+
             } catch (error) {
                 console.error("Authentication error: ", error);
                 showModal('Authentication Error', `Failed to authenticate with Firebase: ${error.message}`);
