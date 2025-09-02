@@ -142,38 +142,81 @@
                     <button id="create-game-btn" class="btn-primary py-2 px-6 rounded-lg text-lg font-bold">Create Game</button>
                 </div>
             </div>
+            <div id="host-setup" class="space-y-4 hidden">
+                <div class="space-y-2">
+                    <label for="host-password-input" class="block font-bold text-gray-300">Set a Host Password:</label>
+                    <input type="password" id="host-password-input" placeholder="Enter a password" class="w-full p-2 rounded-md bg-gray-700 text-white placeholder-gray-500 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                </div>
+                <div class="space-y-2">
+                    <label for="fee-input" class="block font-bold text-gray-300">Set Player Fee (Prize Amount):</label>
+                    <input type="number" id="fee-input" placeholder="e.g., 5" min="1" class="w-full p-2 rounded-md bg-gray-700 text-white placeholder-gray-500 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                </div>
+            </div>
         </main>
         <main id="game-area" class="space-y-6 hidden">
             <div id="game-state" class="hidden">
                 <div class="bg-gray-700 rounded-xl p-4 text-center">
                     <p id="current-game-id" class="text-xl font-bold text-blue-400 mb-2"></p>
-                    <div id="host-view" class="space-y-4 hidden">
-                        <div class="flex justify-center items-center space-x-4">
-                            <button id="start-game-btn" class="btn-primary py-2 px-6 rounded-lg text-lg font-bold">Start Game</button>
-                            <button id="draw-number-btn" class="btn-primary py-2 px-6 rounded-lg text-lg font-bold hidden">Draw Number</button>
+                    <div class="flex flex-col sm:flex-row items-start justify-between space-y-4 sm:space-y-0 sm:space-x-4">
+                        <div id="host-view" class="space-y-4 w-full sm:w-1/2 hidden">
+                            <!-- Host controls -->
+                            <div id="host-lobby-view" class="space-y-4">
+                                <h4 class="text-xl font-bold text-blue-300">Joined Players (<span id="player-count">0</span>)</h4>
+                                <ul id="players-ul" class="list-disc list-inside space-y-1 text-left max-h-48 overflow-y-auto p-2 bg-gray-800 rounded-md"></ul>
+                                <button id="start-game-btn" class="btn-primary py-2 px-6 rounded-lg text-lg font-bold w-full">Start Game</button>
+                            </div>
+                            <div id="host-in-game-view" class="space-y-4 hidden">
+                                <div class="flex justify-center items-center space-x-4">
+                                    <button id="draw-number-btn" class="btn-primary py-2 px-6 rounded-lg text-lg font-bold">Draw Number</button>
+                                </div>
+                                <div class="flex items-center justify-center space-x-2">
+                                    <div id="last-called-number" class="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center font-bold text-3xl">--</div>
+                                </div>
+                                <div class="grid grid-cols-5 sm:grid-cols-10 gap-2 mt-4">
+                                    <div id="called-numbers-display" class="col-span-full host-view"></div>
+                                </div>
+                                <div id="bingo-claims-list" class="mt-4 p-4 bg-gray-800 rounded-lg max-h-48 overflow-y-auto">
+                                    <h4 class="text-lg font-bold text-red-400 mb-2">Bingo Claims</h4>
+                                    <ul id="claims-ul" class="list-disc list-inside space-y-1"></ul>
+                                </div>
+                                <button id="end-game-btn" class="btn-danger py-2 px-6 rounded-lg text-lg font-bold w-full mt-4">End Game</button>
+                            </div>
                         </div>
-                        <div class="flex items-center justify-center space-x-2">
-                            <div id="last-called-number" class="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center font-bold text-3xl">--</div>
+                        <div id="player-view" class="space-y-4 w-full sm:w-1/2 hidden">
+                            <!-- Player controls -->
+                            <div id="player-lobby-view" class="space-y-4">
+                                <h4 class="text-xl font-bold text-blue-300">Waiting for Host...</h4>
+                                <ul id="players-ul-player" class="list-disc list-inside space-y-1 text-left max-h-48 overflow-y-auto p-2 bg-gray-800 rounded-md"></ul>
+                                <button id="leave-game-btn-lobby" class="btn-danger py-2 px-6 rounded-lg text-lg font-bold mt-4 w-full">Leave Game</button>
+                            </div>
+                            <div id="player-in-game-view" class="space-y-4 hidden">
+                                <div class="flex items-center justify-center mb-4">
+                                    <div id="last-called-number-player" class="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center font-bold text-3xl">--</div>
+                                </div>
+                                <div id="bingo-card" class="bingo-card bg-gray-600 p-2 rounded-xl border-2 border-gray-500"></div>
+                                <div class="flex justify-center space-x-4">
+                                    <button id="generate-card-btn" class="btn-primary py-2 px-6 rounded-lg text-lg font-bold">Generate Card</button>
+                                    <button id="bingo-btn" class="bg-red-500 hover:bg-red-600 transition-all text-white py-2 px-6 rounded-lg text-lg font-bold shadow-md">Bingo!</button>
+                                </div>
+                            </div>
+                            <button id="leave-game-btn" class="btn-danger py-2 px-6 rounded-lg text-lg font-bold w-full mt-4">Leave Game</button>
                         </div>
-                        <div class="grid grid-cols-5 sm:grid-cols-10 gap-2 mt-4">
-                            <div id="called-numbers-display" class="col-span-full host-view"></div>
+                        <div id="game-info" class="space-y-4 w-full sm:w-1/2 hidden">
+                            <div id="rules-view" class="p-4 bg-gray-800 rounded-xl space-y-2">
+                                <h4 class="text-2xl font-bold text-blue-400 mb-2">Game Rules</h4>
+                                <ul class="list-disc list-inside text-left">
+                                    <li>Mark numbers on your card as they are called.</li>
+                                    <li>Click "Bingo!" when you have a winning line.</li>
+                                    <li>A winning line can be horizontal, vertical, or diagonal.</li>
+                                    <li>The center "FREE" space is automatically marked.</li>
+                                </ul>
+                            </div>
+                            <div id="prize-view" class="p-4 bg-gray-800 rounded-xl space-y-2">
+                                <h4 class="text-2xl font-bold text-blue-400 mb-2">Winner's Prize</h4>
+                                <p id="fee-display" class="text-lg font-bold">Fee per player: --</p>
+                                <p id="prize-amount" class="text-4xl font-extrabold text-green-400 drop-shadow-lg">--</p>
+                            </div>
                         </div>
-                        <div id="bingo-claims-list" class="mt-4 p-4 bg-gray-800 rounded-lg max-h-48 overflow-y-auto">
-                            <h4 class="text-lg font-bold text-red-400 mb-2">Bingo Claims</h4>
-                            <ul id="claims-ul" class="list-disc list-inside space-y-1"></ul>
-                        </div>
-                        <button id="end-game-btn" class="btn-danger py-2 px-6 rounded-lg text-lg font-bold mt-4">End Game</button>
-                    </div>
-                    <div id="player-view" class="space-y-4 hidden">
-                        <div class="flex items-center justify-center mb-4">
-                            <div id="last-called-number-player" class="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center font-bold text-3xl">--</div>
-                        </div>
-                        <div id="bingo-card" class="bingo-card bg-gray-600 p-2 rounded-xl border-2 border-gray-500"></div>
-                        <div class="flex justify-center space-x-4">
-                            <button id="generate-card-btn" class="btn-primary py-2 px-6 rounded-lg text-lg font-bold">Generate Card</button>
-                            <button id="bingo-btn" class="bg-red-500 hover:bg-red-600 transition-all text-white py-2 px-6 rounded-lg text-lg font-bold shadow-md">Bingo!</button>
-                        </div>
-                        <button id="leave-game-btn" class="btn-danger py-2 px-6 rounded-lg text-lg font-bold mt-4">Leave Game</button>
                     </div>
                 </div>
             </div>
@@ -184,26 +227,27 @@
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, addDoc, setDoc, onSnapshot, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        setLogLevel('debug'); // For debugging Firestore operations
+        setLogLevel('debug');
 
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyBtfCEBd_K0BNWB4XHO9fS_ngN2hEyusC4",
-            authDomain: "habeshabingo-f5a04.firebaseapp.com",
-            projectId: "habeshabingo-f5a04",
-            storageBucket: "habeshabingo-f5a04.firebasestorage.app",
-            messagingSenderId: "348927213717",
-            appId: "1:348927213717:web:eff50a1f5a2dd6abbedb9c"
-        };
+        // This is the specific User ID that is authorized to create new games.
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
 
         // Initialize Firebase services
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-
-        // This is the specific User ID that is authorized to create new games.
-        // It's the ID you provided.
-        const AUTHORIZED_HOST_ID = "VFrxu78sMCRCLnLoygGUBTGxXTG3";
+        
+        // Ensure user is signed in
+        const __initial_auth_token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        async function authenticate() {
+            if (__initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+            return auth.currentUser.uid;
+        }
 
         let userId = null;
 
@@ -215,14 +259,21 @@
         const modalOkBtn = document.getElementById('modal-ok-btn');
         const authInfo = document.getElementById('auth-info');
         const gameSetupArea = document.getElementById('game-setup-area');
-        const usernameInput = document.getElementById('username-input'); // New username input
+        const usernameInput = document.getElementById('username-input');
         const gameIdInput = document.getElementById('game-id-input');
+        const hostPasswordInput = document.getElementById('host-password-input');
+        const feeInput = document.getElementById('fee-input');
         const joinGameBtn = document.getElementById('join-game-btn');
         const createGameBtn = document.getElementById('create-game-btn');
+        const hostSetupDiv = document.getElementById('host-setup');
         const gameArea = document.getElementById('game-area');
         const gameStateDiv = document.getElementById('game-state');
         const currentGameIdDisplay = document.getElementById('current-game-id');
         const hostViewDiv = document.getElementById('host-view');
+        const hostLobbyView = document.getElementById('host-lobby-view');
+        const hostInGameView = document.getElementById('host-in-game-view');
+        const playersUl = document.getElementById('players-ul');
+        const playerCountSpan = document.getElementById('player-count');
         const startGameBtn = document.getElementById('start-game-btn');
         const drawNumberBtn = document.getElementById('draw-number-btn');
         const lastCalledNumberDisplay = document.getElementById('last-called-number');
@@ -230,12 +281,20 @@
         const claimsUl = document.getElementById('claims-ul');
         const endGameBtn = document.getElementById('end-game-btn');
         const playerViewDiv = document.getElementById('player-view');
+        const playerLobbyView = document.getElementById('player-lobby-view');
+        const playerInGameView = document.getElementById('player-in-game-view');
+        const playersUlPlayer = document.getElementById('players-ul-player');
         const lastCalledNumberPlayerDisplay = document.getElementById('last-called-number-player');
         const bingoCardContainer = document.getElementById('bingo-card');
         const generateCardBtn = document.getElementById('generate-card-btn');
         const bingoBtn = document.getElementById('bingo-btn');
         const leaveGameBtn = document.getElementById('leave-game-btn');
-
+        const gameInfoDiv = document.getElementById('game-info');
+        const rulesViewDiv = document.getElementById('rules-view');
+        const prizeViewDiv = document.getElementById('prize-view');
+        const feeDisplay = document.getElementById('fee-display');
+        const prizeAmountDisplay = document.getElementById('prize-amount');
+        
         // Game state variables
         let gameId = null;
         let isHost = false;
@@ -244,6 +303,7 @@
         let markedNumbers = new Set();
         let unsubscribeGameListener;
         let unsubscribeClaimsListener;
+        let unsubscribePlayersListener;
 
         // --- Utility Functions ---
         function showModal(title, message) {
@@ -359,17 +419,22 @@
 
         // --- Firebase Integration ---
         async function createGame() {
-            if (userId !== AUTHORIZED_HOST_ID) {
-                showModal('Unauthorized', 'Only an authorized user can create a game.');
+            const newGameId = `BINGO-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+            const hostPassword = hostPasswordInput.value.trim();
+            const fee = parseFloat(feeInput.value);
+            
+            if (!hostPassword || isNaN(fee) || fee <= 0) {
+                showModal('Missing Information', 'Please set a host password and a valid player fee.');
                 return;
             }
-            const newGameId = `BINGO-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-            const gameRef = doc(db, 'bingoGames', newGameId);
+
+            const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', newGameId);
             try {
                 await setDoc(gameRef, {
                     hostId: userId,
+                    hostPassword: hostPassword,
+                    fee: fee,
                     calledNumbers: [],
-                    claims: [],
                     createdAt: new Date(),
                     status: 'waiting'
                 });
@@ -377,17 +442,39 @@
                 isHost = true;
                 showGameUI();
                 listenForGameUpdates();
-                showModal('Game Created!', `Share this Game ID with your friends: <br/><span class="font-mono font-bold text-blue-300">${gameId}</span>`);
+                await addPlayerToGame();
+                showModal('Game Created!', `Game ID: <span class="font-mono font-bold text-blue-300">${gameId}</span>. Player Fee: ${fee}. You are the Host.`);
             } catch (error) {
                 console.error("Error creating game: ", error);
                 showModal('Error', `Failed to create a new game: ${error.message}`);
             }
         }
 
+        async function addPlayerToGame() {
+            const username = usernameInput.value.trim();
+            if (!username) {
+                showModal('Username Required', 'Please enter a username.');
+                return;
+            }
+
+            const playersRef = collection(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId, 'players');
+            try {
+                const playerRef = doc(playersRef, userId);
+                await setDoc(playerRef, {
+                    userId: userId,
+                    username: username,
+                    joinedAt: new Date(),
+                });
+            } catch (error) {
+                console.error("Error adding player to game: ", error);
+                showModal('Error', `Failed to join the game: ${error.message}`);
+            }
+        }
+
         async function joinGame() {
             const username = usernameInput.value.trim();
             const inputId = gameIdInput.value.trim().toUpperCase();
-
+            
             if (!username) {
                 showModal('Username Required', 'Please enter a username before joining a game.');
                 return;
@@ -396,14 +483,14 @@
                 showModal('Invalid ID', 'Please enter a valid Game ID.');
                 return;
             }
-            const gameRef = doc(db, 'bingoGames', inputId);
+            const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', inputId);
             try {
                 const gameDoc = await getDoc(gameRef);
                 if (gameDoc.exists()) {
                     gameId = inputId;
-                    isHost = (gameDoc.data().hostId === userId);
                     showGameUI();
                     listenForGameUpdates();
+                    await addPlayerToGame();
                     showModal('Joined Game!', `You have joined game ${gameId} as ${username}.`);
                 } else {
                     showModal('Game Not Found', 'The entered Game ID does not exist.');
@@ -414,35 +501,64 @@
             }
         }
 
+        async function checkHostAccess() {
+            const inputId = gameIdInput.value.trim().toUpperCase();
+            const hostPassword = hostPasswordInput.value.trim();
+            if (!inputId || !hostPassword) {
+                 showModal('Missing Information', 'Please enter the Game ID and Host Password.');
+                return;
+            }
+
+            const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', inputId);
+            try {
+                const gameDoc = await getDoc(gameRef);
+                if (gameDoc.exists() && gameDoc.data().hostPassword === hostPassword) {
+                    gameId = inputId;
+                    isHost = true;
+                    showGameUI();
+                    listenForGameUpdates();
+                    await addPlayerToGame();
+                    showModal('Host Access Granted', `You have host access for game ${gameId}.`);
+                } else {
+                    showModal('Access Denied', 'Incorrect Game ID or Host Password.');
+                }
+            } catch (error) {
+                console.error("Error checking host access: ", error);
+                showModal('Error', `Failed to verify host access: ${error.message}`);
+            }
+        }
+
+
         function listenForGameUpdates() {
             if (unsubscribeGameListener) unsubscribeGameListener();
             if (unsubscribeClaimsListener) unsubscribeClaimsListener();
-            
-            const gameRef = doc(db, 'bingoGames', gameId);
+            if (unsubscribePlayersListener) unsubscribePlayersListener();
+
+            const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId);
             unsubscribeGameListener = onSnapshot(gameRef, (docSnapshot) => {
                 if (docSnapshot.exists()) {
                     const data = docSnapshot.data();
                     calledNumbers = data.calledNumbers || [];
                     renderCalledNumbers(calledNumbers);
+                    
+                    if (data.status === 'in-progress') {
+                        hostLobbyView.classList.add('hidden');
+                        hostInGameView.classList.remove('hidden');
+                        playerLobbyView.classList.add('hidden');
+                        playerInGameView.classList.remove('hidden');
+                        gameInfoDiv.classList.remove('hidden');
 
-                    if (isHost) {
-                        if (data.status === 'in-progress') {
-                            startGameBtn.classList.add('hidden');
-                            drawNumberBtn.classList.remove('hidden');
-                        } else {
-                            startGameBtn.classList.remove('hidden');
-                            drawNumberBtn.classList.add('hidden');
-                        }
-                    } else {
-                        if (data.status === 'in-progress') {
-                            generateCardBtn.disabled = true;
-                            generateCardBtn.textContent = 'Game Started';
-                            generateCardBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                        } else {
+                        if (!isHost) {
                             generateCardBtn.disabled = false;
                             generateCardBtn.textContent = 'Generate Card';
                             generateCardBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                         }
+                    } else {
+                        hostLobbyView.classList.remove('hidden');
+                        hostInGameView.classList.add('hidden');
+                        playerLobbyView.classList.remove('hidden');
+                        playerInGameView.classList.add('hidden');
+                        gameInfoDiv.classList.add('hidden');
                     }
                 } else {
                     showModal('Game Ended', 'The host has ended the game.');
@@ -453,7 +569,7 @@
                 showModal('Error', `Failed to get real-time game updates: ${error.message}`);
             });
 
-            const claimsRef = collection(db, 'bingoGames', gameId, 'claims');
+            const claimsRef = collection(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId, 'claims');
             unsubscribeClaimsListener = onSnapshot(claimsRef, (querySnapshot) => {
                 claimsUl.innerHTML = '';
                 const claims = [];
@@ -470,11 +586,45 @@
                 console.error("Error listening to claims:", error);
                 showModal('Error', `Failed to get real-time claim updates: ${error.message}`);
             });
+            
+            const playersRef = collection(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId, 'players');
+            unsubscribePlayersListener = onSnapshot(playersRef, (querySnapshot) => {
+                playersUl.innerHTML = '';
+                playersUlPlayer.innerHTML = '';
+                const players = [];
+                querySnapshot.forEach((doc) => {
+                    players.push(doc.data());
+                });
+                playerCountSpan.textContent = players.length;
+                players.forEach(player => {
+                    const listItem = document.createElement('li');
+                    listItem.classList.add('text-lg');
+                    listItem.textContent = player.username;
+                    playersUl.appendChild(listItem);
+                    
+                    const playerLobbyItem = document.createElement('li');
+                    playerLobbyItem.classList.add('text-lg');
+                    playerLobbyItem.textContent = player.username;
+                    playersUlPlayer.appendChild(playerLobbyItem);
+                });
+                
+                // Calculate and display prize
+                const gameDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId);
+                getDoc(gameDocRef).then(docSnapshot => {
+                    const fee = docSnapshot.data().fee || 0;
+                    const prize = (players.length * fee) * 0.8;
+                    feeDisplay.textContent = `Fee per player: $${fee.toFixed(2)}`;
+                    prizeAmountDisplay.textContent = `$${prize.toFixed(2)}`;
+                });
+            }, (error) => {
+                console.error("Error listening to players:", error);
+                showModal('Error', `Failed to get real-time player list: ${error.message}`);
+            });
         }
 
         async function startGame() {
             if (!isHost) return;
-            const gameRef = doc(db, 'bingoGames', gameId);
+            const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId);
             try {
                 await setDoc(gameRef, { status: 'in-progress' }, { merge: true });
                 showModal('Game Started!', 'The game has officially begun. Start drawing numbers!');
@@ -486,7 +636,7 @@
 
         async function drawNumber() {
             if (!isHost) return;
-            const gameRef = doc(db, 'bingoGames', gameId);
+            const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId);
             try {
                 const gameDoc = await getDoc(gameRef);
                 const data = gameDoc.data();
@@ -526,7 +676,7 @@
             }
 
             if (checkBingo()) {
-                const claimsRef = collection(db, 'bingoGames', gameId, 'claims');
+                const claimsRef = collection(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId, 'claims');
                 try {
                     const flattenedCard = gameCard.flat();
 
@@ -534,7 +684,7 @@
                         userId: userId,
                         username: username,
                         claimedAt: new Date(),
-                        card: flattenedCard
+                        card: JSON.stringify(flattenedCard)
                     });
                     showModal('BINGO!', 'You have successfully claimed Bingo!');
                 } catch (error) {
@@ -548,7 +698,7 @@
 
         async function endGame() {
             if (!isHost) return;
-            const gameRef = doc(db, 'bingoGames', gameId);
+            const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId);
             try {
                 await deleteDoc(gameRef);
                 showModal('Game Ended', 'The game has been deleted. Everyone will be disconnected.');
@@ -572,15 +722,48 @@
             if (isHost) {
                 hostViewDiv.classList.remove('hidden');
                 playerViewDiv.classList.add('hidden');
+                hostLobbyView.classList.remove('hidden');
+                hostInGameView.classList.add('hidden');
+                gameInfoDiv.classList.add('hidden');
             } else {
                 hostViewDiv.classList.add('hidden');
                 playerViewDiv.classList.remove('hidden');
+                playerLobbyView.classList.remove('hidden');
+                playerInGameView.classList.add('hidden');
+                gameInfoDiv.classList.add('hidden');
             }
         }
+        
+        createGameBtn.addEventListener('click', () => {
+             hostSetupDiv.classList.toggle('hidden');
+        });
+
+        joinGameBtn.addEventListener('click', async () => {
+            const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameIdInput.value.trim().toUpperCase());
+            const gameDoc = await getDoc(gameRef);
+            if (!gameDoc.exists()) {
+                 showModal('Game Not Found', 'The entered Game ID does not exist.');
+                 return;
+            }
+            if (gameDoc.data().hostPassword && hostPasswordInput.value.trim() === gameDoc.data().hostPassword) {
+                 checkHostAccess();
+            } else {
+                 joinGame();
+            }
+        });
+
+
+        startGameBtn.addEventListener('click', startGame);
+        drawNumberBtn.addEventListener('click', drawNumber);
+        endGameBtn.addEventListener('click', endGame);
+        leaveGameBtn.addEventListener('click', leaveGame);
+        generateCardBtn.addEventListener('click', createBingoCard);
+        bingoBtn.addEventListener('click', claimBingo);
 
         function resetGame() {
             if (unsubscribeGameListener) unsubscribeGameListener();
             if (unsubscribeClaimsListener) unsubscribeClaimsListener();
+            if (unsubscribePlayersListener) unsubscribePlayersListener();
             
             gameStateDiv.classList.add('hidden');
             hostViewDiv.classList.add('hidden');
@@ -594,38 +777,18 @@
             renderCalledNumbers([]);
             bingoCardContainer.innerHTML = '';
             gameIdInput.value = '';
-            usernameInput.value = ''; // Clear username input
-            generateCardBtn.disabled = false;
-            generateCardBtn.textContent = 'Generate Card';
-            generateCardBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            usernameInput.value = '';
+            hostPasswordInput.value = '';
+            feeInput.value = '';
+            hostSetupDiv.classList.add('hidden');
         }
-
-        joinGameBtn.addEventListener('click', joinGame);
-        createGameBtn.addEventListener('click', createGame);
-        startGameBtn.addEventListener('click', startGame);
-        drawNumberBtn.addEventListener('click', drawNumber);
-        endGameBtn.addEventListener('click', endGame);
-        leaveGameBtn.addEventListener('click', leaveGame);
-        generateCardBtn.addEventListener('click', createBingoCard);
-        bingoBtn.addEventListener('click', claimBingo);
 
         // --- Initialization ---
         window.onload = async function() {
             loadingSpinner.classList.remove('hidden');
             try {
-                await signInAnonymously(auth);
-                userId = auth.currentUser.uid;
-                
-                if (userId === AUTHORIZED_HOST_ID) {
-                    authInfo.textContent = `You are the host! User ID: ${userId}`;
-                    createGameBtn.disabled = false;
-                    createGameBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                } else {
-                    authInfo.textContent = `Welcome, Player!`;
-                    createGameBtn.disabled = true;
-                    createGameBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                }
-
+                userId = await authenticate();
+                authInfo.textContent = `You are authenticated with User ID: ${userId}`;
             } catch (error) {
                 console.error("Authentication error: ", error);
                 showModal('Authentication Error', `Failed to authenticate with Firebase: ${error.message}`);
