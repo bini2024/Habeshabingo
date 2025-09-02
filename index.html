@@ -197,49 +197,49 @@
         const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-        let db, auth, userId = null;
-
+        // Initialize Firebase services
         const app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
 
-        // UI elements
+        let userId = null;
+
+        // --- UI Element References ---
         const loadingSpinner = document.getElementById('loading-spinner');
-        const authInfo = document.getElementById('auth-info');
-        const gameSetupArea = document.getElementById('game-setup-area');
-        const gameArea = document.getElementById('game-area');
-        const gameIdInput = document.getElementById('game-id-input');
-        const joinGameBtn = document.getElementById('join-game-btn');
-        const createGameBtn = document.getElementById('create-game-btn');
-        const gameStateDiv = document.getElementById('game-state');
-        const hostViewDiv = document.getElementById('host-view');
-        const playerViewDiv = document.getElementById('player-view');
-        const currentGameIdDisplay = document.getElementById('current-game-id');
-        const startGameBtn = document.getElementById('start-game-btn');
-        const drawNumberBtn = document.getElementById('draw-number-btn');
-        const endGameBtn = document.getElementById('end-game-btn');
-        const leaveGameBtn = document.getElementById('leave-game-btn');
-        const lastCalledNumberDisplay = document.getElementById('last-called-number');
-        const lastCalledNumberPlayerDisplay = document.getElementById('last-called-number-player');
-        const calledNumbersDisplay = document.getElementById('called-numbers-display');
-        const bingoCardContainer = document.getElementById('bingo-card');
-        const generateCardBtn = document.getElementById('generate-card-btn');
-        const bingoBtn = document.getElementById('bingo-btn');
-        const claimsUl = document.getElementById('claims-ul');
         const modalContainer = document.getElementById('modal-container');
         const modalTitle = document.getElementById('modal-title');
         const modalMessage = document.getElementById('modal-message');
         const modalOkBtn = document.getElementById('modal-ok-btn');
+        const authInfo = document.getElementById('auth-info');
+        const gameSetupArea = document.getElementById('game-setup-area');
+        const gameIdInput = document.getElementById('game-id-input');
+        const joinGameBtn = document.getElementById('join-game-btn');
+        const createGameBtn = document.getElementById('create-game-btn');
+        const gameArea = document.getElementById('game-area');
+        const gameStateDiv = document.getElementById('game-state');
+        const currentGameIdDisplay = document.getElementById('current-game-id');
+        const hostViewDiv = document.getElementById('host-view');
+        const startGameBtn = document.getElementById('start-game-btn');
+        const drawNumberBtn = document.getElementById('draw-number-btn');
+        const lastCalledNumberDisplay = document.getElementById('last-called-number');
+        const calledNumbersDisplay = document.getElementById('called-numbers-display');
+        const claimsUl = document.getElementById('claims-ul');
+        const endGameBtn = document.getElementById('end-game-btn');
+        const playerViewDiv = document.getElementById('player-view');
+        const lastCalledNumberPlayerDisplay = document.getElementById('last-called-number-player');
+        const bingoCardContainer = document.getElementById('bingo-card');
+        const generateCardBtn = document.getElementById('generate-card-btn');
+        const bingoBtn = document.getElementById('bingo-btn');
+        const leaveGameBtn = document.getElementById('leave-game-btn');
 
-        // Game state
-        const BINGO_LETTERS = ['B', 'I', 'N', 'G', 'O'];
-        let gameCard = null;
-        let markedNumbers = new Set();
+        // Game state variables
         let gameId = null;
         let isHost = false;
+        let gameCard = null;
         let calledNumbers = [];
-        let unsubscribeGameListener = null;
-        let unsubscribeClaimsListener = null;
+        let markedNumbers = new Set();
+        let unsubscribeGameListener;
+        let unsubscribeClaimsListener;
 
         // --- Utility Functions ---
 
@@ -462,7 +462,7 @@
                 claims.forEach(claim => {
                     const listItem = document.createElement('li');
                     listItem.classList.add('text-lg');
-                    listItem.innerHTML = `<span class="text-white font-bold">${claim.userId.substring(0, 8)}...</span> <span class="text-gray-400">claimed BINGO!</span>`;
+                    listItem.innerHTML = `<span class="text-white font-bold">${claim.userId}</span> <span class="text-gray-400">claimed BINGO!</span>`;
                     claimsUl.appendChild(listItem);
                 });
             }, (error) => {
@@ -599,24 +599,18 @@
         window.onload = async function() {
             loadingSpinner.classList.remove('hidden');
             try {
+                let userCredential;
                 if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
+                    userCredential = await signInWithCustomToken(auth, initialAuthToken);
                 } else {
-                    await signInAnonymously(auth);
+                    userCredential = await signInAnonymously(auth);
                 }
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        authInfo.textContent = `User ID: ${userId.substring(0, 8)}...`;
-                    } else {
-                        userId = null;
-                        authInfo.textContent = `Not signed in`;
-                    }
-                    loadingSpinner.classList.add('hidden');
-                });
+                userId = userCredential.user.uid;
+                authInfo.textContent = `User ID: ${userId}`;
             } catch (error) {
                 console.error("Authentication error: ", error);
                 showModal('Authentication Error', 'Failed to authenticate with Firebase.');
+            } finally {
                 loadingSpinner.classList.add('hidden');
             }
         };
