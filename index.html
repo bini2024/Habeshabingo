@@ -112,7 +112,6 @@
     <div id="loading-spinner" class="absolute inset-0 flex items-center justify-center bg-gray-900/70 z-50 transition-opacity duration-300">
         <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
     </div>
-
     <div id="modal-container" class="fixed inset-0 z-50 flex items-center justify-center hidden">
         <div class="modal absolute inset-0"></div>
         <div class="bg-gray-800 rounded-xl shadow-2xl p-6 z-10 w-full max-w-sm text-center">
@@ -123,19 +122,17 @@
             </div>
         </div>
     </div>
-
     <div class="container bg-gray-800 p-8 rounded-2xl shadow-2xl space-y-8 max-w-2xl">
         <header class="text-center space-y-2">
             <h1 class="text-4xl sm:text-5xl font-extrabold text-blue-400 drop-shadow-lg">Habesha Bingo</h1>
             <p id="auth-info" class="text-sm text-gray-400 italic"></p>
         </header>
-
         <!-- Initial Game Setup UI -->
         <main id="game-setup-area" class="space-y-6">
             <div class="flex flex-col sm:flex-row items-center justify-center sm:justify-between space-y-4 sm:space-y-0 text-center sm:text-left">
                 <div class="space-y-2 w-full sm:w-auto">
                     <label for="game-id-input" class="block font-bold text-gray-300">Enter Game ID:</label>
-                    <input type="text" id="game-id-input" placeholder="e.g., GAME123" class="w-full sm:w-48 p-2 rounded-md bg-gray-700 text-white placeholder-gray-500 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                    <input type="text" id="game-id-input" placeholder="e.g., BINGO123" class="w-full sm:w-48 p-2 rounded-md bg-gray-700 text-white placeholder-gray-500 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
                 </div>
                 <div class="flex items-center space-x-2">
                     <button id="join-game-btn" class="btn-primary py-2 px-6 rounded-lg text-lg font-bold">Join Game</button>
@@ -143,7 +140,6 @@
                 </div>
             </div>
         </main>
-
         <!-- Main Game Area -->
         <main id="game-area" class="space-y-6 hidden">
             <!-- Current Game State -->
@@ -182,27 +178,32 @@
             </div>
         </main>
     </div>
-
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, addDoc, setDoc, onSnapshot, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
         setLogLevel('debug'); // For debugging Firestore operations
 
-        // Retrieve Firebase configuration and app ID from the environment
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBtfCEBd_K0BNWB4XHO9fS_ngN2hEyusC4",
+            authDomain: "habeshabingo-f5a04.firebaseapp.com",
+            projectId: "habeshabingo-f5a04",
+            storageBucket: "habeshabingo-f5a04.firebasestorage.app",
+            messagingSenderId: "348927213717",
+            appId: "1:348927213717:web:eff50a1f5a2dd6abbedb9c"
+        };
 
         // Initialize Firebase services
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        
+
         let userId = null;
+        const appId = 'habeshabingo-f5a04'; // Use projectId as appId for consistency
+        const initialAuthToken = null; // Set to null since not provided
 
         // --- UI Element References ---
         const loadingSpinner = document.getElementById('loading-spinner');
@@ -242,13 +243,11 @@
         let unsubscribeClaimsListener;
 
         // --- Utility Functions ---
-
         function showModal(title, message) {
             modalTitle.textContent = title;
             modalMessage.innerHTML = message;
             modalContainer.classList.remove('hidden');
         }
-
         modalOkBtn.addEventListener('click', () => {
             modalContainer.classList.add('hidden');
         });
@@ -263,11 +262,11 @@
 
         function createBingoCard() {
             gameCard = [
-                generateUniqueNumbers(5, 1, 15),
-                generateUniqueNumbers(5, 16, 30),
-                generateUniqueNumbers(5, 31, 45),
-                generateUniqueNumbers(5, 46, 60),
-                generateUniqueNumbers(5, 61, 75)
+                generateUniqueNumbers(5, 1, 15),   // B
+                generateUniqueNumbers(5, 16, 30),  // I
+                generateUniqueNumbers(5, 31, 45),  // N
+                generateUniqueNumbers(5, 46, 60),  // G
+                generateUniqueNumbers(5, 61, 75)   // O
             ];
             // Center is the free space
             gameCard[2][2] = 'FREE';
@@ -278,11 +277,11 @@
 
         function renderBingoCard() {
             bingoCardContainer.innerHTML = '';
-            for (let i = 0; i < 5; i++) { // Column loop
-                for (let j = 0; j < 5; j++) { // Row loop
+            for (let j = 0; j < 5; j++) { // Row loop
+                for (let i = 0; i < 5; i++) { // Column loop
                     const cell = document.createElement('div');
                     cell.classList.add('bingo-cell');
-                    const number = gameCard[i][j];
+                    const number = gameCard[i][j]; // Access column i, row j
                     cell.textContent = number;
                     if (number === 'FREE') {
                         cell.classList.add('free');
@@ -298,7 +297,7 @@
         }
 
         function toggleMarked(number, cell) {
-            if (calledNumbers.includes(number)) {
+            if (calledNumbers.includes(number) || number === 'FREE') {
                 if (markedNumbers.has(number)) {
                     markedNumbers.delete(number);
                     cell.classList.remove('marked');
@@ -312,28 +311,22 @@
         }
 
         function checkBingo() {
-            // Check if a card has been generated
             if (!gameCard) {
                 showModal('Card Missing', 'Please generate a Bingo card first!');
                 return false;
             }
-
-            // Check if there are any marked numbers
             if (markedNumbers.size < 5) {
                 return false;
             }
-
-            // Check rows, columns, and diagonals
             const lines = [
                 // Rows
-                ...gameCard.map(row => row),
+                ...gameCard[0].map((_, j) => gameCard.map(col => col[j])),
                 // Columns
-                ...gameCard[0].map((_, i) => gameCard.map(col => col[i])),
+                ...gameCard.map(col => col),
                 // Diagonals
                 gameCard.map((col, i) => col[i]),
                 gameCard.map((col, i) => col[4 - i])
             ];
-
             return lines.some(line => line.every(num => markedNumbers.has(num)));
         }
 
@@ -355,10 +348,9 @@
         }
 
         // --- Firebase Integration ---
-
         async function createGame() {
             const newGameId = `BINGO-${Math.floor(Math.random() * 10000)}`;
-            const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', newGameId);
+            const gameRef = doc(db, 'bingoGames', newGameId);
             try {
                 await setDoc(gameRef, {
                     hostId: userId,
@@ -374,7 +366,7 @@
                 showModal('Game Created!', `Share this Game ID with your friends: <br/><span class="font-mono font-bold text-blue-300">${gameId}</span>`);
             } catch (error) {
                 console.error("Error creating game: ", error);
-                showModal('Error', 'Failed to create a new game. Please try again.');
+                showModal('Error', `Failed to create a new game: ${error.message}`);
             }
         }
 
@@ -384,7 +376,7 @@
                 showModal('Invalid ID', 'Please enter a valid Game ID.');
                 return;
             }
-            const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', inputId);
+            const gameRef = doc(db, 'bingoGames', inputId);
             try {
                 const gameDoc = await getDoc(gameRef);
                 if (gameDoc.exists()) {
@@ -398,7 +390,7 @@
                 }
             } catch (error) {
                 console.error("Error joining game: ", error);
-                showModal('Error', 'Failed to join the game. Please try again.');
+                showModal('Error', `Failed to join the game: ${error.message}`);
             }
         }
 
@@ -409,16 +401,14 @@
             if (unsubscribeClaimsListener) {
                 unsubscribeClaimsListener();
             }
-
-            const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId);
+            const gameRef = doc(db, 'bingoGames', gameId);
             unsubscribeGameListener = onSnapshot(gameRef, (docSnapshot) => {
                 if (docSnapshot.exists()) {
                     const data = docSnapshot.data();
                     calledNumbers = data.calledNumbers || [];
                     renderCalledNumbers(calledNumbers);
-                    
+
                     if (isHost) {
-                        // Host view logic based on game status
                         if (data.status === 'in-progress') {
                             startGameBtn.classList.add('hidden');
                             drawNumberBtn.classList.remove('hidden');
@@ -427,11 +417,9 @@
                             drawNumberBtn.classList.add('hidden');
                         }
                     } else {
-                        // Player view logic based on game status
                         if (data.status === 'in-progress' && gameCard === null) {
                             showModal('Game Started!', 'The host has started the game. Please generate a card to play!');
                         }
-                        // Disable card generation once numbers are called
                         if (calledNumbers.length > 0) {
                             generateCardBtn.disabled = true;
                             generateCardBtn.textContent = 'Game Started';
@@ -448,11 +436,10 @@
                 }
             }, (error) => {
                 console.error("Error listening to game updates:", error);
-                showModal('Error', 'Failed to get real-time game updates.');
+                showModal('Error', `Failed to get real-time game updates: ${error.message}`);
             });
 
-            // Listen for claims
-            const claimsRef = collection(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId, 'claims');
+            const claimsRef = collection(db, 'bingoGames', gameId, 'claims');
             unsubscribeClaimsListener = onSnapshot(claimsRef, (querySnapshot) => {
                 claimsUl.innerHTML = '';
                 const claims = [];
@@ -472,19 +459,19 @@
 
         async function startGame() {
             if (!isHost) return;
-            const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId);
+            const gameRef = doc(db, 'bingoGames', gameId);
             try {
                 await setDoc(gameRef, { status: 'in-progress' }, { merge: true });
                 showModal('Game Started!', 'The game has officially begun. Start drawing numbers!');
             } catch (error) {
                 console.error("Error starting game: ", error);
-                showModal('Error', 'Failed to start the game.');
+                showModal('Error', `Failed to start the game: ${error.message}`);
             }
         }
 
         async function drawNumber() {
             if (!isHost) return;
-            const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId);
+            const gameRef = doc(db, 'bingoGames', gameId);
             try {
                 const gameDoc = await getDoc(gameRef);
                 const data = gameDoc.data();
@@ -493,30 +480,26 @@
                     return;
                 }
                 const currentCalledNumbers = data.calledNumbers || [];
-                
                 const allNumbers = [];
-                for(let i=1; i<=75; i++) allNumbers.push(i);
-                
+                for (let i = 1; i <= 75; i++) allNumbers.push(i);
                 const remainingNumbers = allNumbers.filter(num => !currentCalledNumbers.includes(num));
-                
                 if (remainingNumbers.length > 0) {
                     const newNumber = remainingNumbers[Math.floor(Math.random() * remainingNumbers.length)];
                     await setDoc(gameRef, {
-                        ...data,
                         calledNumbers: [...currentCalledNumbers, newNumber]
-                    });
+                    }, { merge: true });
                 } else {
                     showModal('Game Over', 'All numbers have been called!');
                 }
             } catch (error) {
                 console.error("Error drawing number: ", error);
-                showModal('Error', 'Failed to draw a new number.');
+                showModal('Error', `Failed to draw a new number: ${error.message}`);
             }
         }
 
         async function claimBingo() {
             if (checkBingo()) {
-                const claimsRef = collection(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId, 'claims');
+                const claimsRef = collection(db, 'bingoGames', gameId, 'claims');
                 try {
                     await addDoc(claimsRef, {
                         userId: userId,
@@ -525,7 +508,7 @@
                     showModal('BINGO!', 'You have successfully claimed Bingo!');
                 } catch (error) {
                     console.error("Error claiming bingo:", error);
-                    showModal('Error', 'Failed to claim Bingo. Please try again.');
+                    showModal('Error', `Failed to claim Bingo: ${error.message}`);
                 }
             } else {
                 showModal('Not a Bingo!', 'Keep playing, you do not have Bingo yet!');
@@ -534,13 +517,13 @@
 
         async function endGame() {
             if (!isHost) return;
-            const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId);
+            const gameRef = doc(db, 'bingoGames', gameId);
             try {
                 await deleteDoc(gameRef);
                 showModal('Game Ended', 'The game has been deleted. Everyone will be disconnected.');
             } catch (error) {
                 console.error("Error ending game:", error);
-                showModal('Error', 'Failed to end the game.');
+                showModal('Error', `Failed to end the game: ${error.message}`);
             }
         }
 
@@ -550,7 +533,6 @@
         }
 
         // --- UI Logic and Event Listeners ---
-
         function showGameUI() {
             gameSetupArea.classList.add('hidden');
             gameArea.classList.remove('hidden');
@@ -593,9 +575,8 @@
         leaveGameBtn.addEventListener('click', leaveGame);
         generateCardBtn.addEventListener('click', createBingoCard);
         bingoBtn.addEventListener('click', claimBingo);
-        
-        // --- Initialization ---
 
+        // --- Initialization ---
         window.onload = async function() {
             loadingSpinner.classList.remove('hidden');
             try {
@@ -608,12 +589,11 @@
                 authInfo.textContent = `User ID: ${userId}`;
             } catch (error) {
                 console.error("Authentication error: ", error);
-                showModal('Authentication Error', 'Failed to authenticate with Firebase.');
+                showModal('Authentication Error', `Failed to authenticate with Firebase: ${error.message}`);
             } finally {
                 loadingSpinner.classList.add('hidden');
             }
         };
-
     </script>
 </body>
 </html>
