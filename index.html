@@ -186,22 +186,22 @@
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, addDoc, setDoc, onSnapshot, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         setLogLevel('debug'); // For debugging Firestore operations
 
-        // Global variables provided by the Canvas environment
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        // Retrieve Firebase configuration and app ID from the environment
         const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         // Initialize Firebase services
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-
+        
         let userId = null;
 
         // --- UI Element References ---
@@ -599,13 +599,12 @@
         window.onload = async function() {
             loadingSpinner.classList.remove('hidden');
             try {
-                let userCredential;
                 if (initialAuthToken) {
-                    userCredential = await signInWithCustomToken(auth, initialAuthToken);
+                    await signInWithCustomToken(auth, initialAuthToken);
                 } else {
-                    userCredential = await signInAnonymously(auth);
+                    await signInAnonymously(auth);
                 }
-                userId = userCredential.user.uid;
+                userId = auth.currentUser.uid;
                 authInfo.textContent = `User ID: ${userId}`;
             } catch (error) {
                 console.error("Authentication error: ", error);
