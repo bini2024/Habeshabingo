@@ -10,7 +10,6 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f0f4f8;
             transition: background-color 0.3s ease;
         }
         .container {
@@ -47,7 +46,7 @@
         }
         .host-view {
             display: grid;
-            grid-template-columns: repeat(10, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(3.5rem, 1fr));
             gap: 8px;
             padding: 1rem;
             background-color: #d1d5db;
@@ -127,7 +126,6 @@
             <h1 class="text-4xl sm:text-5xl font-extrabold text-blue-400 drop-shadow-lg">Habesha Bingo</h1>
             <p id="auth-info" class="text-sm text-gray-400 italic"></p>
         </header>
-        <!-- Initial Game Setup UI -->
         <main id="game-setup-area" class="space-y-6">
             <div class="flex flex-col sm:flex-row items-center justify-center sm:justify-between space-y-4 sm:space-y-0 text-center sm:text-left">
                 <div class="space-y-2 w-full sm:w-auto">
@@ -140,9 +138,7 @@
                 </div>
             </div>
         </main>
-        <!-- Main Game Area -->
         <main id="game-area" class="space-y-6 hidden">
-            <!-- Current Game State -->
             <div id="game-state" class="hidden">
                 <div class="bg-gray-700 rounded-xl p-4 text-center">
                     <p id="current-game-id" class="text-xl font-bold text-blue-400 mb-2"></p>
@@ -178,7 +174,6 @@
             </div>
         </main>
     </div>
-    <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -261,31 +256,34 @@
         }
 
         function createBingoCard() {
+            if (calledNumbers.length > 0) {
+                showModal('Cannot Generate Card', 'The game has already started. You cannot generate a new card.');
+                return;
+            }
             gameCard = [
-                generateUniqueNumbers(5, 1, 15),   // B
-                generateUniqueNumbers(5, 16, 30),  // I
-                generateUniqueNumbers(5, 31, 45),  // N
-                generateUniqueNumbers(5, 46, 60),  // G
-                generateUniqueNumbers(5, 61, 75)   // O
+                generateUniqueNumbers(5, 1, 15),
+                generateUniqueNumbers(5, 16, 30),
+                generateUniqueNumbers(5, 31, 45),
+                generateUniqueNumbers(5, 46, 60),
+                generateUniqueNumbers(5, 61, 75)
             ];
-            // Center is the free space
             gameCard[2][2] = 'FREE';
             markedNumbers.clear();
+            markedNumbers.add('FREE');
             renderBingoCard();
             showModal('Card Generated!', 'Your unique Bingo card is ready. Good luck!');
         }
 
         function renderBingoCard() {
             bingoCardContainer.innerHTML = '';
-            for (let j = 0; j < 5; j++) { // Row loop
-                for (let i = 0; i < 5; i++) { // Column loop
+            for (let j = 0; j < 5; j++) {
+                for (let i = 0; i < 5; i++) {
                     const cell = document.createElement('div');
                     cell.classList.add('bingo-cell');
-                    const number = gameCard[i][j]; // Access column i, row j
+                    const number = gameCard[i][j];
                     cell.textContent = number;
                     if (number === 'FREE') {
                         cell.classList.add('free');
-                        markedNumbers.add('FREE');
                     }
                     if (markedNumbers.has(number)) {
                         cell.classList.add('marked');
@@ -297,7 +295,15 @@
         }
 
         function toggleMarked(number, cell) {
-            if (calledNumbers.includes(number) || number === 'FREE') {
+            const isNumberOnCard = gameCard.flat().includes(number);
+            const isCalled = calledNumbers.includes(number);
+
+            if (!isNumberOnCard && number !== 'FREE') {
+                showModal('Invalid Action', 'This number is not on your card.');
+                return;
+            }
+
+            if (isCalled || number === 'FREE') {
                 if (markedNumbers.has(number)) {
                     markedNumbers.delete(number);
                     cell.classList.remove('marked');
@@ -311,22 +317,19 @@
         }
 
         function checkBingo() {
-            if (!gameCard) {
-                showModal('Card Missing', 'Please generate a Bingo card first!');
-                return false;
+            if (!gameCard) return false;
+            
+            const lines = [];
+            // Rows
+            for (let j = 0; j < 5; j++) {
+                lines.push(gameCard.map(col => col[j]));
             }
-            if (markedNumbers.size < 5) {
-                return false;
-            }
-            const lines = [
-                // Rows
-                ...gameCard[0].map((_, j) => gameCard.map(col => col[j])),
-                // Columns
-                ...gameCard.map(col => col),
-                // Diagonals
-                gameCard.map((col, i) => col[i]),
-                gameCard.map((col, i) => col[4 - i])
-            ];
+            // Columns
+            lines.push(...gameCard);
+            // Diagonals
+            lines.push(gameCard.map((col, i) => col[i]));
+            lines.push(gameCard.map((col, i) => col[4 - i]));
+            
             return lines.some(line => line.every(num => markedNumbers.has(num)));
         }
 
@@ -345,11 +348,21 @@
                 lastCalledNumberDisplay.textContent = '--';
                 lastCalledNumberPlayerDisplay.textContent = '--';
             }
+            // Automatically mark numbers on the card if the card exists
+            if (gameCard) {
+                const flatCard = gameCard.flat();
+                flatCard.forEach(num => {
+                    if (calledNumbers.includes(num)) {
+                        markedNumbers.add(num);
+                    }
+                });
+                renderBingoCard();
+            }
         }
 
         // --- Firebase Integration ---
         async function createGame() {
-            const newGameId = `BINGO-${Math.floor(Math.random() * 10000)}`;
+            const newGameId = `BINGO-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
             const gameRef = doc(db, 'bingoGames', newGameId);
             try {
                 await setDoc(gameRef, {
@@ -381,7 +394,7 @@
                 const gameDoc = await getDoc(gameRef);
                 if (gameDoc.exists()) {
                     gameId = inputId;
-                    isHost = false;
+                    isHost = (gameDoc.data().hostId === userId);
                     showGameUI();
                     listenForGameUpdates();
                     showModal('Joined Game!', `You have joined game ${gameId}.`);
@@ -395,12 +408,9 @@
         }
 
         function listenForGameUpdates() {
-            if (unsubscribeGameListener) {
-                unsubscribeGameListener();
-            }
-            if (unsubscribeClaimsListener) {
-                unsubscribeClaimsListener();
-            }
+            if (unsubscribeGameListener) unsubscribeGameListener();
+            if (unsubscribeClaimsListener) unsubscribeClaimsListener();
+            
             const gameRef = doc(db, 'bingoGames', gameId);
             unsubscribeGameListener = onSnapshot(gameRef, (docSnapshot) => {
                 if (docSnapshot.exists()) {
@@ -417,10 +427,7 @@
                             drawNumberBtn.classList.add('hidden');
                         }
                     } else {
-                        if (data.status === 'in-progress' && gameCard === null) {
-                            showModal('Game Started!', 'The host has started the game. Please generate a card to play!');
-                        }
-                        if (calledNumbers.length > 0) {
+                        if (data.status === 'in-progress') {
                             generateCardBtn.disabled = true;
                             generateCardBtn.textContent = 'Game Started';
                             generateCardBtn.classList.add('opacity-50', 'cursor-not-allowed');
@@ -454,6 +461,7 @@
                 });
             }, (error) => {
                 console.error("Error listening to claims:", error);
+                showModal('Error', `Failed to get real-time claim updates: ${error.message}`);
             });
         }
 
@@ -480,9 +488,9 @@
                     return;
                 }
                 const currentCalledNumbers = data.calledNumbers || [];
-                const allNumbers = [];
-                for (let i = 1; i <= 75; i++) allNumbers.push(i);
+                const allNumbers = Array.from({ length: 75 }, (_, i) => i + 1);
                 const remainingNumbers = allNumbers.filter(num => !currentCalledNumbers.includes(num));
+                
                 if (remainingNumbers.length > 0) {
                     const newNumber = remainingNumbers[Math.floor(Math.random() * remainingNumbers.length)];
                     await setDoc(gameRef, {
@@ -503,7 +511,8 @@
                 try {
                     await addDoc(claimsRef, {
                         userId: userId,
-                        claimedAt: new Date()
+                        claimedAt: new Date(),
+                        card: gameCard
                     });
                     showModal('BINGO!', 'You have successfully claimed Bingo!');
                 } catch (error) {
@@ -550,6 +559,7 @@
         function resetGame() {
             if (unsubscribeGameListener) unsubscribeGameListener();
             if (unsubscribeClaimsListener) unsubscribeClaimsListener();
+            
             gameStateDiv.classList.add('hidden');
             hostViewDiv.classList.add('hidden');
             playerViewDiv.classList.add('hidden');
@@ -580,11 +590,7 @@
         window.onload = async function() {
             loadingSpinner.classList.remove('hidden');
             try {
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
+                await signInAnonymously(auth);
                 userId = auth.currentUser.uid;
                 authInfo.textContent = `User ID: ${userId}`;
             } catch (error) {
