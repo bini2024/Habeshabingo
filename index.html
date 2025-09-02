@@ -139,7 +139,8 @@
                 </div>
                 <div class="flex items-center space-x-2">
                     <button id="join-game-btn" class="btn-primary py-2 px-6 rounded-lg text-lg font-bold">Join Game</button>
-                    <button id="create-game-btn" class="btn-primary py-2 px-6 rounded-lg text-lg font-bold">Create Game</button>
+                    <button id="host-login-btn" class="btn-primary py-2 px-6 rounded-lg text-lg font-bold">Host Login</button>
+                    <button id="create-game-btn" class="btn-primary py-2 px-6 rounded-lg text-lg font-bold hidden">Create Game</button>
                 </div>
             </div>
             <div id="host-setup" class="space-y-4 hidden">
@@ -152,6 +153,13 @@
                     <input type="number" id="fee-input" placeholder="e.g., 5" min="1" class="w-full p-2 rounded-md bg-gray-700 text-white placeholder-gray-500 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
                 </div>
             </div>
+            <div id="host-access-password-area" class="space-y-4 hidden">
+                <div class="space-y-2">
+                    <label for="host-access-password-input" class="block font-bold text-gray-300">Enter Host Access Password:</label>
+                    <input type="password" id="host-access-password-input" placeholder="Enter secret password" class="w-full p-2 rounded-md bg-gray-700 text-white placeholder-gray-500 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                </div>
+                <button id="host-access-login-btn" class="btn-primary py-2 px-6 rounded-lg text-lg font-bold w-full">Login</button>
+            </div>
         </main>
         <main id="game-area" class="space-y-6 hidden">
             <div id="game-state" class="hidden">
@@ -159,7 +167,6 @@
                     <p id="current-game-id" class="text-xl font-bold text-blue-400 mb-2"></p>
                     <div class="flex flex-col sm:flex-row items-start justify-between space-y-4 sm:space-y-0 sm:space-x-4">
                         <div id="host-view" class="space-y-4 w-full sm:w-1/2 hidden">
-                            <!-- Host controls -->
                             <div id="host-lobby-view" class="space-y-4">
                                 <h4 class="text-xl font-bold text-blue-300">Joined Players (<span id="player-count">0</span>)</h4>
                                 <ul id="players-ul" class="list-disc list-inside space-y-1 text-left max-h-48 overflow-y-auto p-2 bg-gray-800 rounded-md"></ul>
@@ -183,7 +190,6 @@
                             </div>
                         </div>
                         <div id="player-view" class="space-y-4 w-full sm:w-1/2 hidden">
-                            <!-- Player controls -->
                             <div id="player-lobby-view" class="space-y-4">
                                 <h4 class="text-xl font-bold text-blue-300">Waiting for Host...</h4>
                                 <ul id="players-ul-player" class="list-disc list-inside space-y-1 text-left max-h-48 overflow-y-auto p-2 bg-gray-800 rounded-md"></ul>
@@ -229,7 +235,6 @@
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         setLogLevel('debug');
 
-        // Your web app's Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyBtfCEBd_K0BNWB4XHO9fS_ngN2hEyusC4",
             authDomain: "habeshabingo-f5a04.firebaseapp.com",
@@ -248,6 +253,10 @@
         const appId = firebaseConfig.appId;
         let userId = null;
 
+        // --- NEW: THE SECRET HOST ACCESS PASSWORD ---
+        // *** IMPORTANT: CHANGE THIS TO A SECURE PASSWORD OF YOUR CHOICE ***
+        const SECRET_HOST_ACCESS_PASSWORD = 'YOUR_SECRET_HOST_PASSWORD'; 
+
         // --- UI Element References ---
         const loadingSpinner = document.getElementById('loading-spinner');
         const modalContainer = document.getElementById('modal-container');
@@ -262,6 +271,10 @@
         const feeInput = document.getElementById('fee-input');
         const joinGameBtn = document.getElementById('join-game-btn');
         const createGameBtn = document.getElementById('create-game-btn');
+        const hostLoginBtn = document.getElementById('host-login-btn');
+        const hostAccessPasswordArea = document.getElementById('host-access-password-area');
+        const hostAccessPasswordInput = document.getElementById('host-access-password-input');
+        const hostAccessLoginBtn = document.getElementById('host-access-login-btn');
         const hostSetupDiv = document.getElementById('host-setup');
         const gameArea = document.getElementById('game-area');
         const gameStateDiv = document.getElementById('game-state');
@@ -731,9 +744,23 @@
             }
         }
         
-        createGameBtn.addEventListener('click', () => {
-             hostSetupDiv.classList.toggle('hidden');
+        hostLoginBtn.addEventListener('click', () => {
+            hostAccessPasswordArea.classList.remove('hidden');
         });
+
+        hostAccessLoginBtn.addEventListener('click', () => {
+            if (hostAccessPasswordInput.value === SECRET_HOST_ACCESS_PASSWORD) {
+                hostAccessPasswordArea.classList.add('hidden');
+                hostLoginBtn.classList.add('hidden');
+                createGameBtn.classList.remove('hidden');
+                hostSetupDiv.classList.remove('hidden');
+                showModal('Success', 'Host access granted!');
+            } else {
+                showModal('Access Denied', 'Incorrect password.');
+            }
+        });
+
+        createGameBtn.addEventListener('click', createGame);
 
         joinGameBtn.addEventListener('click', async () => {
             const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameIdInput.value.trim().toUpperCase());
