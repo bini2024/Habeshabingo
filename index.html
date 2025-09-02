@@ -229,26 +229,23 @@
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         setLogLevel('debug');
 
-        // This is the specific User ID that is authorized to create new games.
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-
-        // Initialize Firebase services
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBtfCEBd_K0BNWB4XHO9fS_ngN2hEyusC4",
+            authDomain: "habeshabingo-f5a04.firebaseapp.com",
+            projectId: "habeshabingo-f5a04",
+            storageBucket: "habeshabingo-f5a04.firebasestorage.app",
+            messagingSenderId: "348927213717",
+            appId: "1:348927213717:web:eff50a1f5a2dd6abbedb9c"
+        };
+        
+        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         
-        // Ensure user is signed in
-        const __initial_auth_token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        async function authenticate() {
-            if (__initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
-                await signInAnonymously(auth);
-            }
-            return auth.currentUser.uid;
-        }
-
+        // This is the specific User ID that is authorized to create new games.
+        const appId = firebaseConfig.appId;
         let userId = null;
 
         // --- UI Element References ---
@@ -787,7 +784,8 @@
         window.onload = async function() {
             loadingSpinner.classList.remove('hidden');
             try {
-                userId = await authenticate();
+                const authResult = await signInAnonymously(auth);
+                userId = auth.currentUser.uid;
                 authInfo.textContent = `You are authenticated with User ID: ${userId}`;
             } catch (error) {
                 console.error("Authentication error: ", error);
