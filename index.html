@@ -129,6 +129,11 @@
         <main id="game-setup-area" class="space-y-6">
             <div class="flex flex-col sm:flex-row items-center justify-center sm:justify-between space-y-4 sm:space-y-0 text-center sm:text-left">
                 <div class="space-y-2 w-full sm:w-auto">
+                    <label for="username-input" class="block font-bold text-gray-300">Enter Your Username:</label>
+                    <input type="text" id="username-input" placeholder="e.g., JaneDoe" required
+                           class="w-full sm:w-48 p-2 rounded-md bg-gray-700 text-white placeholder-gray-500 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                </div>
+                <div class="space-y-2 w-full sm:w-auto">
                     <label for="game-id-input" class="block font-bold text-gray-300">Enter Game ID:</label>
                     <input type="text" id="game-id-input" placeholder="e.g., BINGO123" class="w-full sm:w-48 p-2 rounded-md bg-gray-700 text-white placeholder-gray-500 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
                 </div>
@@ -210,6 +215,7 @@
         const modalOkBtn = document.getElementById('modal-ok-btn');
         const authInfo = document.getElementById('auth-info');
         const gameSetupArea = document.getElementById('game-setup-area');
+        const usernameInput = document.getElementById('username-input'); // New username input
         const gameIdInput = document.getElementById('game-id-input');
         const joinGameBtn = document.getElementById('join-game-btn');
         const createGameBtn = document.getElementById('create-game-btn');
@@ -379,7 +385,13 @@
         }
 
         async function joinGame() {
+            const username = usernameInput.value.trim();
             const inputId = gameIdInput.value.trim().toUpperCase();
+
+            if (!username) {
+                showModal('Username Required', 'Please enter a username before joining a game.');
+                return;
+            }
             if (!inputId) {
                 showModal('Invalid ID', 'Please enter a valid Game ID.');
                 return;
@@ -392,7 +404,7 @@
                     isHost = (gameDoc.data().hostId === userId);
                     showGameUI();
                     listenForGameUpdates();
-                    showModal('Joined Game!', `You have joined game ${gameId}.`);
+                    showModal('Joined Game!', `You have joined game ${gameId} as ${username}.`);
                 } else {
                     showModal('Game Not Found', 'The entered Game ID does not exist.');
                 }
@@ -451,7 +463,7 @@
                 claims.forEach(claim => {
                     const listItem = document.createElement('li');
                     listItem.classList.add('text-lg');
-                    listItem.innerHTML = `<span class="text-white font-bold">${claim.userId}</span> <span class="text-gray-400">claimed BINGO!</span>`;
+                    listItem.innerHTML = `<span class="text-white font-bold">${claim.username}</span> <span class="text-gray-400">claimed BINGO!</span>`;
                     claimsUl.appendChild(listItem);
                 });
             }, (error) => {
@@ -500,29 +512,39 @@
             }
         }
 
-        // Function to claim Bingo and save the card to Firestore
-async function claimBingo() {
-    if (checkBingo()) {
-        const claimsRef = collection(db, 'bingoGames', gameId, 'claims');
-        try {
-            // Flatten the 2D gameCard array into a 1D array
-            const flattenedCard = gameCard.flat();
+        async function claimBingo() {
+            const username = usernameInput.value.trim();
 
-            await addDoc(claimsRef, {
-                userId: userId,
-                claimedAt: new Date(),
-                // Store the flattened array instead of the nested array
-                card: flattenedCard 
-            });
-            showModal('BINGO!', 'You have successfully claimed Bingo!');
-        } catch (error) {
-            console.error("Error claiming bingo:", error);
-            showModal('Error', `Failed to claim Bingo: ${error.message}`);
+            if (!gameCard) {
+                showModal('Card Not Generated', 'You must generate a bingo card first.');
+                return;
+            }
+
+            if (!username) {
+                showModal('Username Required', 'Please enter a username before claiming Bingo.');
+                return;
+            }
+
+            if (checkBingo()) {
+                const claimsRef = collection(db, 'bingoGames', gameId, 'claims');
+                try {
+                    const flattenedCard = gameCard.flat();
+
+                    await addDoc(claimsRef, {
+                        userId: userId,
+                        username: username,
+                        claimedAt: new Date(),
+                        card: flattenedCard
+                    });
+                    showModal('BINGO!', 'You have successfully claimed Bingo!');
+                } catch (error) {
+                    console.error("Error claiming bingo:", error);
+                    showModal('Error', `Failed to claim Bingo: ${error.message}`);
+                }
+            } else {
+                showModal('Not a Bingo!', 'Keep playing, you do not have Bingo yet!');
+            }
         }
-    } else {
-        showModal('Not a Bingo!', 'Keep playing, you do not have Bingo yet!');
-    }
-}
 
         async function endGame() {
             if (!isHost) return;
@@ -572,6 +594,7 @@ async function claimBingo() {
             renderCalledNumbers([]);
             bingoCardContainer.innerHTML = '';
             gameIdInput.value = '';
+            usernameInput.value = ''; // Clear username input
             generateCardBtn.disabled = false;
             generateCardBtn.textContent = 'Generate Card';
             generateCardBtn.classList.remove('opacity-50', 'cursor-not-allowed');
