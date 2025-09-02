@@ -196,6 +196,10 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // Replace this with the actual User ID you want to authorize to create games.
+        // You can get this ID from the 'User ID' displayed on the screen after you log in anonymously.
+        const AUTHORIZED_HOST_ID = "YOUR_AUTHORIZED_HOST_ID_HERE";
+
         let userId = null;
         const appId = 'habeshabingo-f5a04'; // Use projectId as appId for consistency
         const initialAuthToken = null; // Set to null since not provided
@@ -302,7 +306,6 @@
                 showModal('Invalid Action', 'This number is not on your card.');
                 return;
             }
-
             if (isCalled || number === 'FREE') {
                 if (markedNumbers.has(number)) {
                     markedNumbers.delete(number);
@@ -348,20 +351,16 @@
                 lastCalledNumberDisplay.textContent = '--';
                 lastCalledNumberPlayerDisplay.textContent = '--';
             }
-            // Automatically mark numbers on the card if the card exists
-            if (gameCard) {
-                const flatCard = gameCard.flat();
-                flatCard.forEach(num => {
-                    if (calledNumbers.includes(num)) {
-                        markedNumbers.add(num);
-                    }
-                });
-                renderBingoCard();
-            }
+            // IMPORTANT: Removed the automatic marking logic here
+            // The player must now click the numbers themselves.
         }
 
         // --- Firebase Integration ---
         async function createGame() {
+            if (userId !== AUTHORIZED_HOST_ID) {
+                showModal('Unauthorized', 'Only an authorized user can create a game.');
+                return;
+            }
             const newGameId = `BINGO-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
             const gameRef = doc(db, 'bingoGames', newGameId);
             try {
@@ -593,6 +592,10 @@
                 await signInAnonymously(auth);
                 userId = auth.currentUser.uid;
                 authInfo.textContent = `User ID: ${userId}`;
+                if (userId !== AUTHORIZED_HOST_ID) {
+                    createGameBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    createGameBtn.disabled = true;
+                }
             } catch (error) {
                 console.error("Authentication error: ", error);
                 showModal('Authentication Error', `Failed to authenticate with Firebase: ${error.message}`);
