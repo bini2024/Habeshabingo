@@ -34,6 +34,8 @@
             cursor: pointer;
             user-select: none;
             transition: transform 0.2s, background-color 0.2s;
+            text-align: center;
+            padding: 2px;
         }
         .bingo-cell.free {
             background-color: #fecaca;
@@ -105,6 +107,16 @@
             backdrop-filter: blur(5px);
             transition: opacity 0.3s ease;
         }
+        @media (max-width: 640px) {
+            .bingo-cell {
+                font-size: 1rem;
+            }
+            .number-ball {
+                width: 3rem;
+                height: 3rem;
+                font-size: 1.25rem;
+            }
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-900 to-gray-800 text-gray-100 min-h-screen flex items-center justify-center p-4">
@@ -173,8 +185,12 @@
                                 <button id="start-game-btn" class="btn-primary py-2 px-6 rounded-lg text-lg font-bold w-full">Start Game</button>
                             </div>
                             <div id="host-in-game-view" class="space-y-4 hidden">
-                                <div class="flex justify-center items-center space-x-4">
+                                <div class="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4 mb-4">
                                     <button id="draw-number-btn" class="btn-primary py-2 px-6 rounded-lg text-lg font-bold">Draw Number</button>
+                                    <div class="flex items-center space-x-2">
+                                        <label for="caller-toggle" class="text-white">Enable Caller</label>
+                                        <input type="checkbox" id="caller-toggle" class="form-checkbox h-5 w-5 text-blue-600">
+                                    </div>
                                 </div>
                                 <div class="flex items-center justify-center space-x-2">
                                     <div id="last-called-number" class="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center font-bold text-3xl">--</div>
@@ -228,6 +244,8 @@
             </div>
         </main>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -255,7 +273,35 @@
 
         // --- NEW: THE SECRET HOST ACCESS PASSWORD ---
         // *** IMPORTANT: CHANGE THIS TO A SECURE PASSWORD OF YOUR CHOICE ***
-        const SECRET_HOST_ACCESS_PASSWORD = 'Bini07127522#'; 
+        const SECRET_HOST_ACCESS_PASSWORD = 'YOUR_SECRET_HOST_PASSWORD'; 
+
+        // --- NEW: SOUND EFFECTS ---
+        const drawNumberSound = new Audio('data:audio/mp3;base64,SUQzBAAAAAAAI1RTU1UAAAAPZ2VuZXJhdGVkIGJ5IHRlbmlvdGFkAAAAASuBAAAAI-pUQUxCAAAAPFRhbGVudCAyMDI0IGJ5IHRlbmlvdGFkIChodHRwczovL2FjYWRlbWljLWludGVyYWN0aXZlLmNvbS8p/xIBaAMAAAI-jAAAAAASuAFAgAAABAAABAAABAAABAAABACoA8QAAMpWAAAACxAAAEWAAAK1MAABAAAAAAv/4QAAABlAAABoAAABwAAAAAAAAAAAI-pVAwAAAAAPeC41NgABAAABAEkAAAY-jACICmCgA7gE0c-jAAAAJ+hAAAAAASuAFAAAAC+gAAAAABLAFkFwJ7AAABAAAAAAAAAAAAAAAAMgAAADJodHRwczovL2FjYWRlbWljLWludGVyYWN0aXZlLmNvbS8gAAAADzJqAAAAAABAAAAAAAAAAAAAAAAYf9b3AAAgxN0eHQAAPUAAAAAABgAAABUAAAAAP0AAAAABXIAAABYgAAAyA5oYWJvcml0YQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAI9p-gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAABgAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFQAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAABW1kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==');
+        const markCellSound = new Audio('data:audio/mp3;base64,SUQzBAAAAAAAI1RTU1UAAAAPZ2VuZXJhdGVkIGJ5IHRlbmlvdGFkAAAAASuBAAAAI-pUQUxCAAAAPFRhbGVudCAyMDI0IGJ5IHRlbmlvdGFkIChodHRwczovL2FjYWRlbWljLWludGVyYWN0aXZlLmNvbS8p/xIBaAMAAAI-jAAAAAASuAFAgAAABAAABAAABAAABAAABACoA8QAAMpWAAAACxAAAEWAAAK1MAABAAAAAAv/4QAAABlAAABoAAABwAAAAAAAAAAAI-pVAwAAAAAPeC41NgABAAABAEkAAAY-jACICmCgA7gE0c-jAAAAJ+hAAAAAASuAFAAAAC+gAAAAABLAFkFwJ7AAABAAAAAAAAAAAAAAAAMgAAADJodHRwczovL2FjYWRlbWljLWludGVyYWN0aXZlLmNvbS8gAAAADzJqAAAAAABAAAAAAAAAAAAAAAAYf9b3AAAgxN0eHQAAPUAAAAAABgAAABUAAAAAP0AAAAABXIAAABYgAAAyA5oYWJvcml0YQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAI9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAABgAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFQAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAABW1kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==');
+        const bingoSound = new Audio('data:audio/mp3;base64,SUQzBAAAAAAAI1RTU1UAAAAPZ2VuZXJhdGVkIGJ5IHRlbmlvdGFkAAAAASuBAAAAI-pUQUxCAAAAPFRhbGVudCAyMDI0IGJ5IHRlbmlvdGFkIChodHRwczovL2FjYWRlbWljLWludGVyYWN0aXZlLmNvbS8p/xIBaAMAAAI-jAAAAAASuAFAgAAABAAABAAABAAABAAABACoA8QAAMpWAAAACxAAAEWAAAK1MAABAAAAAAv/4QAAABlAAABoAAABwAAAAAAAAAAAI-pVAwAAAAAPeC41NgABAAABAEkAAAY-jACICmCgA7gE0c-jAAAAJ+hAAAAAASuAFAAAAC+gAAAAABLAFkFwJ7AAABAAAAAAAAAAAAAAAAMgAAADJodHRwczovL2FjYWRlbWljLWludGVyYWN0aXZlLmNvbS8gAAAADzJqAAAAAABAAAAAAAAAAAAAAAAYf9b3AAAgxN0eHQAAPUAAAAAABgAAABUAAAAAP0AAAAABXIAAABYgAAAyA5oYWJvcml0YQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAI9p-gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAABgAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFQAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAABW1kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==');
+        
+        // --- NEW: CALLER API ---
+        let isCallerEnabled = true;
+        const callerToggle = document.getElementById('caller-toggle');
+        
+        callerToggle.addEventListener('change', (e) => {
+            isCallerEnabled = e.target.checked;
+        });
+
+        // Set initial state
+        callerToggle.checked = isCallerEnabled;
+
+        function speakNumber(number) {
+            if (!isCallerEnabled) return;
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(`The next number is ${number}`);
+                utterance.pitch = 1;
+                utterance.rate = 1;
+                window.speechSynthesis.speak(utterance);
+            } else {
+                console.warn('Web Speech API is not supported in this browser.');
+            }
+        }
 
         // --- UI Element References ---
         const loadingSpinner = document.getElementById('loading-spinner');
@@ -373,6 +419,7 @@
         }
 
         function toggleMarked(number, cell) {
+            markCellSound.play().catch(e => console.error("Sound playback failed:", e)); // Play sound on mark
             const isNumberOnCard = gameCard.flat().includes(number);
             const isCalled = calledNumbers.includes(number);
 
@@ -548,7 +595,18 @@
             unsubscribeGameListener = onSnapshot(gameRef, (docSnapshot) => {
                 if (docSnapshot.exists()) {
                     const data = docSnapshot.data();
-                    calledNumbers = data.calledNumbers || [];
+                    const newCalledNumbers = data.calledNumbers || [];
+                    
+                    // Play sound and speak if a new number has been added
+                    if (newCalledNumbers.length > calledNumbers.length) {
+                        const lastNumber = newCalledNumbers[newCalledNumbers.length - 1];
+                        drawNumberSound.play().catch(e => console.error("Sound playback failed:", e));
+                        if (isHost) {
+                             speakNumber(lastNumber);
+                        }
+                    }
+                    
+                    calledNumbers = newCalledNumbers;
                     renderCalledNumbers(calledNumbers);
                     
                     if (data.status === 'in-progress') {
@@ -686,6 +744,13 @@
             }
 
             if (checkBingo()) {
+                bingoSound.play().catch(e => console.error("Sound playback failed:", e)); // Play Bingo sound
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+
                 const claimsRef = collection(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId, 'claims');
                 try {
                     const flattenedCard = gameCard.flat();
