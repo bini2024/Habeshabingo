@@ -33,9 +33,14 @@
             border-radius: 8px;
             cursor: pointer;
             user-select: none;
-            transition: transform 0.2s, background-color 0.2s;
+            transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s;
             text-align: center;
             padding: 2px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .bingo-cell:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
         .bingo-cell.free {
             background-color: #fecaca;
@@ -45,13 +50,14 @@
             background-color: #60a5fa;
             color: white;
             transform: scale(0.95);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
         }
         .host-view {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(3.5rem, 1fr));
             gap: 8px;
             padding: 1rem;
-            background-color: #d1d5db;
+            background-color: #374151; /* Darker gray */
             border-radius: 12px;
         }
         .number-ball {
@@ -66,11 +72,13 @@
             font-weight: 700;
             border-radius: 50%;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
         }
         .called-number {
             background-color: #1e40af;
             color: white;
             transform: scale(1.1);
+            box-shadow: 0 6px 12px rgba(30, 64, 175, 0.5);
         }
         .fade-in {
             animation: fadeIn 0.5s ease-in-out;
@@ -79,33 +87,52 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        /* Base button style */
+        .btn {
+            transition: transform 0.2s ease, background 0.3s ease, box-shadow 0.2s ease;
+            transform-origin: center;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+        }
+        .btn:active {
+            transform: scale(0.95);
+        }
         .btn-primary {
             background: #1e40af;
-            transition: transform 0.2s ease, background 0.3s ease;
             box-shadow: 0 4px 15px rgba(30, 64, 175, 0.4);
         }
         .btn-primary:hover {
-            transform: translateY(-2px);
             background: #1c3c9b;
-        }
-        .btn-primary:active {
-            transform: translateY(0);
         }
         .btn-danger {
             background-color: #dc2626;
-            transition: transform 0.2s ease, background-color 0.3s ease;
         }
         .btn-danger:hover {
-            transform: translateY(-2px);
             background-color: #b91c1c;
         }
-        .btn-danger:active {
-            transform: translateY(0);
+        .btn-approve {
+            background-color: #16a34a; /* Green */
         }
-        .modal {
+        .btn-approve:hover {
+            background-color: #15803d;
+        }
+        /* Modal transitions */
+        .modal-container {
+            transition: opacity 0.3s ease;
+        }
+        .modal-body {
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform: scale(0.95);
+            opacity: 0;
+        }
+        .modal-container:not(.hidden) .modal-body {
+            transform: scale(1);
+            opacity: 1;
+        }
+        .modal-backdrop {
             background: rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(5px);
-            transition: opacity 0.3s ease;
         }
         @media (max-width: 640px) {
             .bingo-cell {
@@ -120,73 +147,86 @@
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-900 to-gray-800 text-gray-100 min-h-screen flex items-center justify-center p-4">
+    
     <div id="loading-spinner" class="absolute inset-0 flex items-center justify-center bg-gray-900/70 z-50 transition-opacity duration-300">
         <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
     </div>
-    <div id="modal-container" class="fixed inset-0 z-50 flex items-center justify-center hidden">
-        <div class="modal absolute inset-0"></div>
-        <div class="bg-gray-800 rounded-xl shadow-2xl p-6 z-10 w-full max-w-sm text-center">
+    
+    <div id="modal-container" class="modal-container fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="modal-backdrop absolute inset-0"></div>
+        <div class="modal-body bg-gray-800 rounded-xl shadow-2xl p-6 z-10 w-full max-w-sm text-center">
             <h3 id="modal-title" class="text-2xl font-bold mb-4 text-blue-400"></h3>
             <p id="modal-message" class="mb-6"></p>
             <div class="flex justify-center space-x-4">
-                <button id="modal-ok-btn" class="btn-primary py-2 px-6 rounded-lg text-lg font-bold">OK</button>
+                <button id="modal-ok-btn" class="btn btn-primary py-2 px-6 rounded-lg text-lg font-bold">OK</button>
             </div>
         </div>
     </div>
-    <div class="container bg-gray-800 p-8 rounded-2xl shadow-2xl space-y-8 max-w-2xl">
+
+    <div id="claim-modal-container" class="modal-container fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="modal-backdrop absolute inset-0"></div>
+        <div class="modal-body bg-gray-800 rounded-xl shadow-2xl p-6 z-10 w-full max-w-md text-center">
+            <h3 id="claim-modal-title" class="text-2xl font-bold mb-4 text-red-400">Verify Bingo Claim</h3>
+            <p class="mb-2 text-gray-300">Player's Card (Marked numbers were called):</p>
+            <div id="claim-modal-card" class="bingo-card bg-gray-600 p-2 rounded-xl border-2 border-gray-500 mb-4">
+                </div>
+            
+            <p class="mb-2 text-gray-300">All Called Numbers:</p>
+            <div id="claim-modal-called-numbers" class="host-view max-h-32 overflow-y-auto mb-6">
+                </div>
+            
+            <div class="flex justify-center space-x-4">
+                <button id="claim-reject-btn" class="btn btn-danger py-2 px-4 rounded-lg text-lg font-bold">Reject</button>
+                <button id="claim-approve-btn" class="btn btn-approve py-2 px-4 rounded-lg text-lg font-bold">Approve Winner</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container bg-gray-800 p-8 rounded-2xl shadow-2xl space-y-8 max-w-5xl">
         <header class="text-center space-y-2">
             <h1 class="text-4xl sm:text-5xl font-extrabold text-blue-400 drop-shadow-lg">Habesha Bingo</h1>
             <p id="auth-info" class="text-sm text-gray-400 italic"></p>
         </header>
+        
         <main id="game-setup-area" class="space-y-6">
             <div class="flex flex-col sm:flex-row items-center justify-center sm:justify-between space-y-4 sm:space-y-0 text-center sm:text-left">
                 <div class="space-y-2 w-full sm:w-auto">
                     <label for="username-input" class="block font-bold text-gray-300">Enter Your Username:</label>
                     <input type="text" id="username-input" placeholder="e.g., JaneDoe" required
-                           class="w-full sm:w-48 p-2 rounded-md bg-gray-700 text-white placeholder-gray-500 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                           class="w-full sm:w-48 p-2 rounded-md bg-gray-700 text-white placeholder-gray-500 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all focus:scale-105">
                 </div>
                 <div class="space-y-2 w-full sm:w-auto">
                     <label for="game-id-input" class="block font-bold text-gray-300">Enter Game ID:</label>
-                    <input type="text" id="game-id-input" placeholder="e.g., BINGO123" class="w-full sm:w-48 p-2 rounded-md bg-gray-700 text-white placeholder-gray-500 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                    <input type="text" id="game-id-input" placeholder="e.g., BINGO123" class="w-full sm:w-48 p-2 rounded-md bg-gray-700 text-white placeholder-gray-500 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all focus:scale-105">
                 </div>
                 <div class="flex items-center space-x-2">
-                    <button id="join-game-btn" class="btn-primary py-2 px-6 rounded-lg text-lg font-bold">Join Game</button>
-                    <button id="host-login-btn" class="btn-primary py-2 px-6 rounded-lg text-lg font-bold">Host Login</button>
-                    <button id="create-game-btn" class="btn-primary py-2 px-6 rounded-lg text-lg font-bold hidden">Create Game</button>
+                    <button id="join-game-btn" class="btn btn-primary py-2 px-6 rounded-lg text-lg font-bold">Join Game</button>
+                    <button id="create-game-btn" class="btn btn-primary py-2 px-6 rounded-lg text-lg font-bold hidden">Create Game</button>
                 </div>
             </div>
             <div id="host-setup" class="space-y-4 hidden">
-                <div class="space-y-2">
-                    <label for="host-password-input" class="block font-bold text-gray-300">Set a Host Password:</label>
-                    <input type="password" id="host-password-input" placeholder="Enter a password" class="w-full p-2 rounded-md bg-gray-700 text-white placeholder-gray-500 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
-                </div>
                 <div class="space-y-2">
                     <label for="fee-input" class="block font-bold text-gray-300">Set Player Fee (Prize Amount):</label>
                     <input type="number" id="fee-input" placeholder="e.g., 5" min="1" class="w-full p-2 rounded-md bg-gray-700 text-white placeholder-gray-500 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
                 </div>
             </div>
-            <div id="host-access-password-area" class="space-y-4 hidden">
-                <div class="space-y-2">
-                    <label for="host-access-password-input" class="block font-bold text-gray-300">Enter Host Access Password:</label>
-                    <input type="password" id="host-access-password-input" placeholder="Enter secret password" class="w-full p-2 rounded-md bg-gray-700 text-white placeholder-gray-500 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
-                </div>
-                <button id="host-access-login-btn" class="btn-primary py-2 px-6 rounded-lg text-lg font-bold w-full">Login</button>
-            </div>
         </main>
+        
         <main id="game-area" class="space-y-6 hidden">
             <div id="game-state" class="hidden">
                 <div class="bg-gray-700 rounded-xl p-4 text-center">
                     <p id="current-game-id" class="text-xl font-bold text-blue-400 mb-2"></p>
-                    <div class="flex flex-col sm:flex-row items-start justify-between space-y-4 sm:space-y-0 sm:space-x-4">
-                        <div id="host-view" class="space-y-4 w-full sm:w-1/2 hidden">
+                    <div class="flex flex-col lg:flex-row items-start justify-between space-y-4 lg:space-y-0 lg:space-x-4">
+                        
+                        <div id="host-view" class="space-y-4 w-full lg:w-1/2 hidden">
                             <div id="host-lobby-view" class="space-y-4">
                                 <h4 class="text-xl font-bold text-blue-300">Joined Players (<span id="player-count">0</span>)</h4>
                                 <ul id="players-ul" class="list-disc list-inside space-y-1 text-left max-h-48 overflow-y-auto p-2 bg-gray-800 rounded-md"></ul>
-                                <button id="start-game-btn" class="btn-primary py-2 px-6 rounded-lg text-lg font-bold w-full">Start Game</button>
+                                <button id="start-game-btn" class="btn btn-primary py-2 px-6 rounded-lg text-lg font-bold w-full">Start Game</button>
                             </div>
                             <div id="host-in-game-view" class="space-y-4 hidden">
                                 <div class="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4 mb-4">
-                                    <button id="draw-number-btn" class="btn-primary py-2 px-6 rounded-lg text-lg font-bold">Draw Number</button>
+                                    <button id="draw-number-btn" class="btn btn-primary py-2 px-6 rounded-lg text-lg font-bold">Draw Number</button>
                                     <div class="flex items-center space-x-2">
                                         <label for="caller-toggle" class="text-white">Enable Caller</label>
                                         <input type="checkbox" id="caller-toggle" class="form-checkbox h-5 w-5 text-blue-600">
@@ -200,16 +240,20 @@
                                 </div>
                                 <div id="bingo-claims-list" class="mt-4 p-4 bg-gray-800 rounded-lg max-h-48 overflow-y-auto">
                                     <h4 class="text-lg font-bold text-red-400 mb-2">Bingo Claims</h4>
-                                    <ul id="claims-ul" class="list-disc list-inside space-y-1"></ul>
+                                    <ul id="claims-ul" class="space-y-2"></ul>
                                 </div>
-                                <button id="end-game-btn" class="btn-danger py-2 px-6 rounded-lg text-lg font-bold w-full mt-4">End Game</button>
+                                <button id="end-game-btn" class="btn btn-danger py-2 px-6 rounded-lg text-lg font-bold w-full mt-4">End Game</button>
                             </div>
                         </div>
-                        <div id="player-view" class="space-y-4 w-full sm:w-1/2 hidden">
+                        
+                        <div id="player-view" class="space-y-4 w-full lg:w-1/2 hidden">
                             <div id="player-lobby-view" class="space-y-4">
                                 <h4 class="text-xl font-bold text-blue-300">Waiting for Host...</h4>
                                 <ul id="players-ul-player" class="list-disc list-inside space-y-1 text-left max-h-48 overflow-y-auto p-2 bg-gray-800 rounded-md"></ul>
-                                <button id="leave-game-btn-lobby" class="btn-danger py-2 px-6 rounded-lg text-lg font-bold mt-4 w-full">Leave Game</button>
+                                
+                                <button id="generate-card-btn" class="btn btn-primary py-2 px-6 rounded-lg text-lg font-bold w-full">Generate Card</button>
+                                
+                                <button id="leave-game-btn-lobby" class="btn btn-danger py-2 px-6 rounded-lg text-lg font-bold mt-4 w-full">Leave Game</button>
                             </div>
                             <div id="player-in-game-view" class="space-y-4 hidden">
                                 <div class="flex items-center justify-center mb-4">
@@ -217,16 +261,17 @@
                                 </div>
                                 <div id="bingo-card" class="bingo-card bg-gray-600 p-2 rounded-xl border-2 border-gray-500"></div>
                                 <div class="flex justify-center space-x-4">
-                                    <button id="generate-card-btn" class="btn-primary py-2 px-6 rounded-lg text-lg font-bold">Generate Card</button>
-                                    <button id="bingo-btn" class="bg-red-500 hover:bg-red-600 transition-all text-white py-2 px-6 rounded-lg text-lg font-bold shadow-md">Bingo!</button>
+                                    <button id="bingo-btn" class="btn bg-red-500 hover:bg-red-600 text-white py-2 px-6 rounded-lg text-lg font-bold shadow-md">Bingo!</button>
                                 </div>
                             </div>
-                            <button id="leave-game-btn" class="btn-danger py-2 px-6 rounded-lg text-lg font-bold w-full mt-4">Leave Game</button>
+                            <button id="leave-game-btn" class="btn btn-danger py-2 px-6 rounded-lg text-lg font-bold w-full mt-4">Leave Game</button>
                         </div>
-                        <div id="game-info" class="space-y-4 w-full sm:w-1/2 hidden">
+                        
+                        <div id="game-info" class="space-y-4 w-full lg:w-1/2 hidden">
                             <div id="rules-view" class="p-4 bg-gray-800 rounded-xl space-y-2">
                                 <h4 class="text-2xl font-bold text-blue-400 mb-2">Game Rules</h4>
                                 <ul class="list-disc list-inside text-left">
+                                    <li>Generate your card before the game starts.</li>
                                     <li>Mark numbers on your card as they are called.</li>
                                     <li>Click "Bingo!" when you have a winning line.</li>
                                     <li>A winning line can be horizontal, vertical, or diagonal.</li>
@@ -250,16 +295,15 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, addDoc, setDoc, onSnapshot, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        setLogLevel('debug');
+        // No setLogLevel('debug')
 
         const firebaseConfig = {
-            apiKey: "AIzaSyBtfCEBd_K0BNWB4XHO9fS_ngN2hEyusC4",
-            authDomain: "habeshabingo-f5a04.firebaseapp.com",
-            projectId: "habeshabingo-f5a04",
-            storageBucket: "habeshabingo-f5a04.firebasestorage.app",
-            messagingSenderId: "348927213717",
-            appId: "1:348927213717:web:eff50a1f5a2dd6abbedb9c"
+            apiKey: "AIzaSyCzDKc4iX8AlREzklyTUL6jG8eidiuDp-I",
+            authDomain: "real-habesha-bingo.firebaseapp.com",
+            projectId: "real-habesha-bingo",
+            storageBucket: "real-habesha-bingo.firebasestorage.app",
+            messagingSenderId: "690619726968",
+            appId: "1:690619726968:web:e26d02fbbb3a6cf295818d"
         };
         
         // Initialize Firebase
@@ -267,28 +311,21 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         
-        // This is the specific User ID that is authorized to create new games.
         const appId = firebaseConfig.appId;
         let userId = null;
-
-        // --- NEW: THE SECRET HOST ACCESS PASSWORD ---
-        // *** IMPORTANT: CHANGE THIS TO A SECURE PASSWORD OF YOUR CHOICE ***
-        const SECRET_HOST_ACCESS_PASSWORD = 'Bini07127522#'; 
-
-        // --- NEW: SOUND EFFECTS ---
-        const drawNumberSound = new Audio('data:audio/mp3;base64,SUQzBAAAAAAAI1RTU1UAAAAPZ2VuZXJhdGVkIGJ5IHRlbmlvdGFkAAAAASuBAAAAI-pUQUxCAAAAPFRhbGVudCAyMDI0IGJ5IHRlbmlvdGFkIChodHRwczovL2FjYWRlbWljLWludGVyYWN0aXZlLmNvbS8p/xIBaAMAAAI-jAAAAAASuAFAgAAABAAABAAABAAABAAABACoA8QAAMpWAAAACxAAAEWAAAK1MAABAAAAAAv/4QAAABlAAABoAAABwAAAAAAAAAAAI-pVAwAAAAAPeC41NgABAAABAEkAAAY-jACICmCgA7gE0c-jAAAAJ+hAAAAAASuAFAAAAC+gAAAAABLAFkFwJ7AAABAAAAAAAAAAAAAAAAMgAAADJodHRwczovL2FjYWRlbWljLWludGVyYWN0aXZlLmNvbS8gAAAADzJqAAAAAABAAAAAAAAAAAAAAAAYf9b3AAAgxN0eHQAAPUAAAAAABgAAABUAAAAAP0AAAAABXIAAABYgAAAyA5oYWJvcml0YQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAI9p-gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAABgAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFQAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAABW1kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==');
-        const markCellSound = new Audio('data:audio/mp3;base64,SUQzBAAAAAAAI1RTU1UAAAAPZ2VuZXJhdGVkIGJ5IHRlbmlvdGFkAAAAASuBAAAAI-pUQUxCAAAAPFRhbGVudCAyMDI0IGJ5IHRlbmlvdGFkIChodHRwczovL2FjYWRlbWljLWludGVyYWN0aXZlLmNvbS8p/xIBaAMAAAI-jAAAAAASuAFAgAAABAAABAAABAAABAAABACoA8QAAMpWAAAACxAAAEWAAAK1MAABAAAAAAv/4QAAABlAAABoAAABwAAAAAAAAAAAI-pVAwAAAAAPeC41NgABAAABAEkAAAY-jACICmCgA7gE0c-jAAAAJ+hAAAAAASuAFAAAAC+gAAAAABLAFkFwJ7AAABAAAAAAAAAAAAAAAAMgAAADJodHRwczovL2FjYWRlbWljLWludGVyYWN0aXZlLmNvbS8gAAAADzJqAAAAAABAAAAAAAAAAAAAAAAYf9b3AAAgxN0eHQAAPUAAAAAABgAAABUAAAAAP0AAAAABXIAAABYgAAAyA5oYWJvcml0YQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAI9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAABgAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFQAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAABW1kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==');
-        const bingoSound = new Audio('data:audio/mp3;base64,SUQzBAAAAAAAI1RTU1UAAAAPZ2VuZXJhdGVkIGJ5IHRlbmlvdGFkAAAAASuBAAAAI-pUQUxCAAAAPFRhbGVudCAyMDI0IGJ5IHRlbmlvdGFkIChodHRwczovL2FjYWRlbWljLWludGVyYWN0aXZlLmNvbS8p/xIBaAMAAAI-jAAAAAASuAFAgAAABAAABAAABAAABAAABACoA8QAAMpWAAAACxAAAEWAAAK1MAABAAAAAAv/4QAAABlAAABoAAABwAAAAAAAAAAAI-pVAwAAAAAPeC41NgABAAABAEkAAAY-jACICmCgA7gE0c-jAAAAJ+hAAAAAASuAFAAAAC+gAAAAABLAFkFwJ7AAABAAAAAAAAAAAAAAAAMgAAADJodHRwczovL2FjYWRlbWljLWludGVyYWN0aXZlLmNvbS8gAAAADzJqAAAAAABAAAAAAAAAAAAAAAAYf9b3AAAgxN0eHQAAPUAAAAAABgAAABUAAAAAP0AAAAABXIAAABYgAAAyA5oYWJvcml0YQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAI9p-gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAABgAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFQAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAABW1kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==');
         
-        // --- NEW: CALLER API ---
+        // --- SOUND EFFECTS ---
+        const drawNumberSound = new Audio('data:audio/mp3;base64,SUQzBAAAAAAAI1RTU1UAAAAPZ2VuZXJhdGVkIGJ5IHRlbmlvdGFkAAAAASuBAAAAI-pUQUxCAAAAPFRhbGVudCAyMDI0IGJ5IHRlbmlvdGFkIChodHRwczovL2FjYWRlbWljLWludGVyYWN0aXZlLmNvbS8p/xIBaAMAAAI-jAAAAAASuAFAgAAABAAABAAABAAABAAABACoA8QAAMpWAAAACxAAAEWAAAK1MAABAAAAAAv/4QAAABlAAABoAAABwAAAAAAAAAAAI-pVAwAAAAAPeC41NgABAAABAEkAAAY-jACICmCgA7gE0c-jAAAAJ+hAAAAAASuAFAAAAC+gAAAAABLAFkFwJ7AAABAAAAAAAAAAAAAAAAMgAAADJodHRwczovL2FjYWRlbWljLWludGVyYWN0aXZlLmNvbS8gAAAADzJqAAAAAABAAAAAAAAAAAAAAAAYf9b3AAAgxN0eHQAAPUAAAAAABgAAABUAAAAAP0AAAAABXIAAABYgAAAyA5oYWJvcml0YQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAI9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAABgAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFQAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAABW1kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==');
+        const markCellSound = new Audio('data:audio/mp3;base64,SUQzBAAAAAAAI1RTU1UAAAAPZ2VuZXJhdGVkIGJ5IHRlbmlvdGFkAAAAASuBAAAAI-pUQUxCAAAAPFRhbGVudCAyMDI0IGJ5IHRlbmlvdGFkIChodHRwczovL2FjYWRlbWljLWludGVyYWN0aXZlLmNvbS8p/xIBaAMAAAI-jAAAAAASuAFAgAAABAAABAAABAAABAAABACoA8QAAMpWAAAACxAAAEWAAAK1MAABAAAAAAv/4QAAABlAAABoAAABwAAAAAAAAAAAI-pVAwAAAAAPeC41NgABAAABAEkAAAY-jACICmCgA7gE0c-jAAAAJ+hAAAAAASuAFAAAAC+gAAAAABLAFkFwJ7AAABAAAAAAAAAAAAAAAAMgAAADJodHRwczovL2FjYWRlbWljLWludGVyYWN0aXZlLmNvbS8gAAAADzJqAAAAAABAAAAAAAAAAAAAAAAYf9b3AAAgxN0eHQAAPUAAAAAABgAAABUAAAAAP0AAAAABXIAAABYgAAAyA5oYWJvcml0YQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAI9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAABgAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFQAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAABW1kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==');
+        const bingoSound = new Audio('data:audio/mp3;base64,SUQzBAAAAAAAI1RTU1UAAAAPZ2VuZXJhdGVkIGJ5IHRlbmlvdGFkAAAAASuBAAAAI-pUQUxCAAAAPFRhbGVudCAyMDI0IGJ5IHRlbmlvdGFkIChodHRwczovL2FjYWRlbWljLWludGVyYWN0aXZlLmNvbS8p/xIBaAMAAAI-jAAAAAASuAFAgAAABAAABAAABAAABAAABACoA8QAAMpWAAAACxAAAEWAAAK1MAABAAAAAAv/4QAAABlAAABoAAABwAAAAAAAAAAAI-pVAwAAAAAPeC41NgABAAABAEkAAAY-jACICmCgA7gE0c-jAAAAJ+hAAAAAASuAFAAAAC+gAAAAABLAFkFwJ7AAABAAAAAAAAAAAAAAAAMgAAADJodHRwczovL2FjYWRlbWljLWludGVyYWN0aXZlLmNvbS8gAAAADzJqAAAAAABAAAAAAAAAAAAAAAAYf9b3AAAgxN0eHQAAPUAAAAAABgAAABUAAAAAP0AAAAABXIAAABYgAAAyA5oYWJvcml0YQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAI9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAABgAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFQAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAABW1kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAV21kAAAAz5YpAAAE9p+gAAAAAAASuAFAAAC-gAAAAAEsAWQTAnswAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==');
+        
+        // --- CALLER API ---
         let isCallerEnabled = true;
         const callerToggle = document.getElementById('caller-toggle');
         
         callerToggle.addEventListener('change', (e) => {
             isCallerEnabled = e.target.checked;
         });
-
-        // Set initial state
         callerToggle.checked = isCallerEnabled;
 
         function speakNumber(number) {
@@ -309,18 +346,24 @@
         const modalTitle = document.getElementById('modal-title');
         const modalMessage = document.getElementById('modal-message');
         const modalOkBtn = document.getElementById('modal-ok-btn');
+        
+        // NEW: Claim Modal UI
+        const claimModalContainer = document.getElementById('claim-modal-container');
+        const claimModalTitle = document.getElementById('claim-modal-title');
+        const claimModalCard = document.getElementById('claim-modal-card');
+        const claimModalCalledNumbers = document.getElementById('claim-modal-called-numbers');
+        const claimRejectBtn = document.getElementById('claim-reject-btn');
+        const claimApproveBtn = document.getElementById('claim-approve-btn');
+        let currentClaimId = null;
+        let currentClaimData = null;
+
         const authInfo = document.getElementById('auth-info');
         const gameSetupArea = document.getElementById('game-setup-area');
         const usernameInput = document.getElementById('username-input');
         const gameIdInput = document.getElementById('game-id-input');
-        const hostPasswordInput = document.getElementById('host-password-input');
         const feeInput = document.getElementById('fee-input');
         const joinGameBtn = document.getElementById('join-game-btn');
         const createGameBtn = document.getElementById('create-game-btn');
-        const hostLoginBtn = document.getElementById('host-login-btn');
-        const hostAccessPasswordArea = document.getElementById('host-access-password-area');
-        const hostAccessPasswordInput = document.getElementById('host-access-password-input');
-        const hostAccessLoginBtn = document.getElementById('host-access-login-btn');
         const hostSetupDiv = document.getElementById('host-setup');
         const gameArea = document.getElementById('game-area');
         const gameStateDiv = document.getElementById('game-state');
@@ -345,15 +388,17 @@
         const generateCardBtn = document.getElementById('generate-card-btn');
         const bingoBtn = document.getElementById('bingo-btn');
         const leaveGameBtn = document.getElementById('leave-game-btn');
+        const leaveGameBtnLobby = document.getElementById('leave-game-btn-lobby'); // ADDED
         const gameInfoDiv = document.getElementById('game-info');
         const rulesViewDiv = document.getElementById('rules-view');
         const prizeViewDiv = document.getElementById('prize-view');
         const feeDisplay = document.getElementById('fee-display');
         const prizeAmountDisplay = document.getElementById('prize-amount');
         
-        // Game state variables
+        // --- Game state variables ---
         let gameId = null;
-        let isHost = false;
+        let isHost = false; // Is the user the host OF THE CURRENT GAME
+        let isHostUser = false; // Does the user have system-wide HOST privileges
         let gameCard = null;
         let calledNumbers = [];
         let markedNumbers = new Set();
@@ -362,9 +407,13 @@
         let unsubscribePlayersListener;
 
         // --- Utility Functions ---
-        function showModal(title, message) {
+        function showModal(title, message, isHtml = false) {
             modalTitle.textContent = title;
-            modalMessage.innerHTML = message;
+            if (isHtml) {
+                modalMessage.innerHTML = message; // Only used for non-user HTML
+            } else {
+                modalMessage.textContent = message; // Safe by default
+            }
             modalContainer.classList.remove('hidden');
         }
         modalOkBtn.addEventListener('click', () => {
@@ -376,26 +425,32 @@
             while (numbers.size < count) {
                 numbers.add(Math.floor(Math.random() * (max - min + 1)) + min);
             }
-            return Array.from(numbers).sort((a, b) => a - b);
+            return Array.from(numbers);
         }
 
         function createBingoCard() {
-            if (calledNumbers.length > 0) {
-                showModal('Cannot Generate Card', 'The game has already started. You cannot generate a new card.');
-                return;
-            }
-            gameCard = [
-                generateUniqueNumbers(5, 1, 15),
-                generateUniqueNumbers(5, 16, 30),
-                generateUniqueNumbers(5, 31, 45),
-                generateUniqueNumbers(5, 46, 60),
-                generateUniqueNumbers(5, 61, 75)
-            ];
-            gameCard[2][2] = 'FREE';
-            markedNumbers.clear();
-            markedNumbers.add('FREE');
-            renderBingoCard();
-            showModal('Card Generated!', 'Your unique Bingo card is ready. Good luck!');
+            // UPDATED: Check if game is in progress
+            const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId);
+            getDoc(gameRef).then(gameDoc => {
+                if (gameDoc.exists() && gameDoc.data().status === 'in-progress') {
+                    showModal('Cannot Generate Card', 'The game has already started. You cannot generate a new card.');
+                    return;
+                }
+
+                // Original logic
+                gameCard = [
+                    generateUniqueNumbers(5, 1, 15),
+                    generateUniqueNumbers(5, 16, 30),
+                    generateUniqueNumbers(5, 31, 45),
+                    generateUniqueNumbers(5, 46, 60),
+                    generateUniqueNumbers(5, 61, 75)
+                ];
+                gameCard[2][2] = 'FREE';
+                markedNumbers.clear();
+                markedNumbers.add('FREE');
+                renderBingoCard();
+                showModal('Card Generated!', 'Your unique Bingo card is ready. Good luck!');
+            });
         }
 
         function renderBingoCard() {
@@ -419,7 +474,7 @@
         }
 
         function toggleMarked(number, cell) {
-            markCellSound.play().catch(e => console.error("Sound playback failed:", e)); // Play sound on mark
+            markCellSound.play().catch(e => console.error("Sound playback failed:", e));
             const isNumberOnCard = gameCard.flat().includes(number);
             const isCalled = calledNumbers.includes(number);
 
@@ -444,15 +499,10 @@
             if (!gameCard) return false;
             
             const lines = [];
-            // Rows
-            for (let j = 0; j < 5; j++) {
-                lines.push(gameCard.map(col => col[j]));
-            }
-            // Columns
-            lines.push(...gameCard);
-            // Diagonals
-            lines.push(gameCard.map((col, i) => col[i]));
-            lines.push(gameCard.map((col, i) => col[4 - i]));
+            for (let j = 0; j < 5; j++) lines.push(gameCard.map(col => col[j])); // Rows
+            lines.push(...gameCard); // Columns
+            lines.push(gameCard.map((col, i) => col[i])); // Diag 1
+            lines.push(gameCard.map((col, i) => col[4 - i])); // Diag 2
             
             return lines.some(line => line.every(num => markedNumbers.has(num)));
         }
@@ -466,8 +516,9 @@
                 calledNumbersDisplay.appendChild(numberBall);
             });
             if (numbers.length > 0) {
-                lastCalledNumberDisplay.textContent = numbers[numbers.length - 1];
-                lastCalledNumberPlayerDisplay.textContent = numbers[numbers.length - 1];
+                const lastNum = numbers[numbers.length - 1];
+                lastCalledNumberDisplay.textContent = lastNum;
+                lastCalledNumberPlayerDisplay.textContent = lastNum;
             } else {
                 lastCalledNumberDisplay.textContent = '--';
                 lastCalledNumberPlayerDisplay.textContent = '--';
@@ -476,12 +527,16 @@
 
         // --- Firebase Integration ---
         async function createGame() {
+            if (!isHostUser) { 
+                showModal('Error', 'You do not have permission to create a game.');
+                return;
+            }
+            
             const newGameId = `BINGO-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-            const hostPassword = hostPasswordInput.value.trim();
             const fee = parseFloat(feeInput.value);
             
-            if (!hostPassword || isNaN(fee) || fee <= 0) {
-                showModal('Missing Information', 'Please set a host password and a valid player fee.');
+            if (isNaN(fee) || fee <= 0) {
+                showModal('Missing Information', 'Please set a valid player fee.');
                 return;
             }
 
@@ -489,18 +544,17 @@
             try {
                 await setDoc(gameRef, {
                     hostId: userId,
-                    hostPassword: hostPassword,
                     fee: fee,
                     calledNumbers: [],
                     createdAt: new Date(),
-                    status: 'waiting'
+                    status: 'waiting' // 'waiting', 'in-progress', 'finished'
                 });
                 gameId = newGameId;
-                isHost = true;
+                isHost = true; 
                 showGameUI();
                 listenForGameUpdates();
                 await addPlayerToGame();
-                showModal('Game Created!', `Game ID: <span class="font-mono font-bold text-blue-300">${gameId}</span>. Player Fee: ${fee}. You are the Host.`);
+                showModal('Game Created!', `Game ID: <span class="font-mono font-bold text-blue-300">${gameId}</span>. Player Fee: ${fee}. You are the Host.`, true);
             } catch (error) {
                 console.error("Error creating game: ", error);
                 showModal('Error', `Failed to create a new game: ${error.message}`);
@@ -545,6 +599,9 @@
                 const gameDoc = await getDoc(gameRef);
                 if (gameDoc.exists()) {
                     gameId = inputId;
+                    if (gameDoc.data().hostId === userId) {
+                        isHost = true;
+                    }
                     showGameUI();
                     listenForGameUpdates();
                     await addPlayerToGame();
@@ -558,34 +615,6 @@
             }
         }
 
-        async function checkHostAccess() {
-            const inputId = gameIdInput.value.trim().toUpperCase();
-            const hostPassword = hostPasswordInput.value.trim();
-            if (!inputId || !hostPassword) {
-                 showModal('Missing Information', 'Please enter the Game ID and Host Password.');
-                return;
-            }
-
-            const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', inputId);
-            try {
-                const gameDoc = await getDoc(gameRef);
-                if (gameDoc.exists() && gameDoc.data().hostPassword === hostPassword) {
-                    gameId = inputId;
-                    isHost = true;
-                    showGameUI();
-                    listenForGameUpdates();
-                    await addPlayerToGame();
-                    showModal('Host Access Granted', `You have host access for game ${gameId}.`);
-                } else {
-                    showModal('Access Denied', 'Incorrect Game ID or Host Password.');
-                }
-            } catch (error) {
-                console.error("Error checking host access: ", error);
-                showModal('Error', `Failed to verify host access: ${error.message}`);
-            }
-        }
-
-
         function listenForGameUpdates() {
             if (unsubscribeGameListener) unsubscribeGameListener();
             if (unsubscribeClaimsListener) unsubscribeClaimsListener();
@@ -597,12 +626,11 @@
                     const data = docSnapshot.data();
                     const newCalledNumbers = data.calledNumbers || [];
                     
-                    // Play sound and speak if a new number has been added
                     if (newCalledNumbers.length > calledNumbers.length) {
                         const lastNumber = newCalledNumbers[newCalledNumbers.length - 1];
                         drawNumberSound.play().catch(e => console.error("Sound playback failed:", e));
                         if (isHost) {
-                             speakNumber(lastNumber);
+                            speakNumber(lastNumber);
                         }
                     }
                     
@@ -615,18 +643,28 @@
                         playerLobbyView.classList.add('hidden');
                         playerInGameView.classList.remove('hidden');
                         gameInfoDiv.classList.remove('hidden');
+                        leaveGameBtn.classList.remove('hidden'); // Show in-game leave
+                        leaveGameBtnLobby.classList.add('hidden'); // Hide lobby leave
 
-                        if (!isHost) {
-                            generateCardBtn.disabled = false;
-                            generateCardBtn.textContent = 'Generate Card';
-                            generateCardBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                        }
-                    } else {
+                    } else if (data.status === 'waiting') {
                         hostLobbyView.classList.remove('hidden');
                         hostInGameView.classList.add('hidden');
                         playerLobbyView.classList.remove('hidden');
                         playerInGameView.classList.add('hidden');
                         gameInfoDiv.classList.add('hidden');
+                        leaveGameBtn.classList.add('hidden'); // Hide in-game leave
+                        leaveGameBtnLobby.classList.remove('hidden'); // Show lobby leave
+
+                    } else if (data.status === 'finished') {
+                        // NEW: Handle game end
+                        showModal('Game Over!', `The winner is ${data.winner}! Thanks for playing.`);
+                        // The modal "OK" button will close, but we need to reset the game
+                        // We'll add a check in the OK button's listener
+                        modalOkBtn.onclick = () => {
+                            modalContainer.classList.add('hidden');
+                            resetGame();
+                            modalOkBtn.onclick = () => modalContainer.classList.add('hidden'); // Reset to default
+                        };
                     }
                 } else {
                     showModal('Game Ended', 'The host has ended the game.');
@@ -642,12 +680,22 @@
                 claimsUl.innerHTML = '';
                 const claims = [];
                 querySnapshot.forEach((doc) => {
-                    claims.push(doc.data());
+                    claims.push({ id: doc.id, ...doc.data() }); // Store doc ID
                 });
+                
                 claims.forEach(claim => {
                     const listItem = document.createElement('li');
-                    listItem.classList.add('text-lg');
-                    listItem.innerHTML = `<span class="text-white font-bold">${claim.username}</span> <span class="text-gray-400">claimed BINGO!</span>`;
+                    // NEW: Create a button for each claim
+                    const claimButton = document.createElement('button');
+                    claimButton.classList.add('btn', 'btn-danger', 'w-full', 'text-left', 'px-4', 'py-2', 'rounded-lg');
+                    claimButton.innerHTML = `<span class="font-bold">${claim.username}</span> claimed BINGO!`;
+                    
+                    // Add listener to open verification modal
+                    claimButton.addEventListener('click', () => {
+                        showClaimModal(claim, claim.id);
+                    });
+                    
+                    listItem.appendChild(claimButton);
                     claimsUl.appendChild(listItem);
                 });
             }, (error) => {
@@ -673,10 +721,9 @@
                     const playerLobbyItem = document.createElement('li');
                     playerLobbyItem.classList.add('text-lg');
                     playerLobbyItem.textContent = player.username;
-                    playersUlPlayer.appendChild(playerLobbyItem);
+                    playersUlPlayer.appendChild(playerLobbyItem.cloneNode(true));
                 });
                 
-                // Calculate and display prize
                 const gameDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId);
                 getDoc(gameDocRef).then(docSnapshot => {
                     const fee = docSnapshot.data().fee || 0;
@@ -732,36 +779,28 @@
 
         async function claimBingo() {
             const username = usernameInput.value.trim();
-
             if (!gameCard) {
                 showModal('Card Not Generated', 'You must generate a bingo card first.');
                 return;
             }
-
             if (!username) {
                 showModal('Username Required', 'Please enter a username before claiming Bingo.');
                 return;
             }
-
             if (checkBingo()) {
-                bingoSound.play().catch(e => console.error("Sound playback failed:", e)); // Play Bingo sound
-                confetti({
-                    particleCount: 100,
-                    spread: 70,
-                    origin: { y: 0.6 }
-                });
+                bingoSound.play().catch(e => console.error("Sound playback failed:", e));
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
 
                 const claimsRef = collection(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId, 'claims');
                 try {
-                    const flattenedCard = gameCard.flat();
-
+                    // UPDATED: Store the 2D gameCard, not the flattened one
                     await addDoc(claimsRef, {
                         userId: userId,
                         username: username,
                         claimedAt: new Date(),
-                        card: JSON.stringify(flattenedCard)
+                        card: JSON.stringify(gameCard) // Store the 2D card
                     });
-                    showModal('BINGO!', 'You have successfully claimed Bingo!');
+                    showModal('BINGO!', 'You have successfully claimed Bingo! The host is verifying your card.');
                 } catch (error) {
                     console.error("Error claiming bingo:", error);
                     showModal('Error', `Failed to claim Bingo: ${error.message}`);
@@ -778,16 +817,105 @@
                 await deleteDoc(gameRef);
                 showModal('Game Ended', 'The game has been deleted. Everyone will be disconnected.');
             } catch (error) {
-                console.error("Error ending game:", error);
+                console.error("Error ending game: ", error);
                 showModal('Error', `Failed to end the game: ${error.message}`);
             }
         }
 
-        function leaveGame() {
-            resetGame();
+        // UPDATED: New function to leave game, deletes player doc
+        async function leaveGame() {
+            // Try to remove player from DB first
+            if (gameId && userId) {
+                const playerRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId, 'players', userId);
+                try {
+                    await deleteDoc(playerRef);
+                } catch (error) {
+                    console.error("Error leaving game (deleting player doc): ", error);
+                    // Still reset UI even if delete fails
+                }
+            }
+            
+            resetGame(); // resetGame() already unsubscribes listeners and resets the UI
             showModal('Game Left', 'You have left the game.');
         }
 
+        // --- NEW: Claim Verification Functions ---
+        function showClaimModal(claimData, claimId) {
+            currentClaimId = claimId;
+            currentClaimData = claimData;
+            
+            claimModalTitle.textContent = `Verify: ${claimData.username}`;
+            
+            // Parse the 2D card
+            const card = JSON.parse(claimData.card);
+            
+            // Render the card
+            claimModalCard.innerHTML = '';
+            for (let j = 0; j < 5; j++) {
+                for (let i = 0; i < 5; i++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('bingo-cell');
+                    const number = card[i][j];
+                    cell.textContent = number;
+                    if (number === 'FREE') {
+                        cell.classList.add('free');
+                    }
+                    // Check if this number was *actually* called
+                    if (calledNumbers.includes(number)) {
+                        cell.classList.add('marked');
+                    }
+                    claimModalCard.appendChild(cell);
+                }
+            }
+            
+            // Render the called numbers
+            claimModalCalledNumbers.innerHTML = '';
+            calledNumbers.forEach(num => {
+                const numberBall = document.createElement('div');
+                numberBall.classList.add('number-ball', 'called-number');
+                numberBall.style.width = '3rem'; // smaller
+                numberBall.style.height = '3rem'; // smaller
+                numberBall.style.fontSize = '1rem'; // smaller
+                numberBall.textContent = num;
+                claimModalCalledNumbers.appendChild(numberBall);
+            });
+            
+            claimModalContainer.classList.remove('hidden');
+        }
+
+        // NEW: Approve Winner
+        async function approveWinner() {
+            if (!isHost || !currentClaimData) return;
+            const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId);
+            try {
+                // Set game status to 'finished' and declare winner
+                await setDoc(gameRef, {
+                    status: 'finished',
+                    winner: currentClaimData.username
+                }, { merge: true });
+                
+                claimModalContainer.classList.add('hidden');
+                // The game-wide listener will now pick up this change and end the game
+            } catch (error) {
+                console.error("Error approving winner: ", error);
+                showModal('Error', `Failed to approve winner: ${error.message}`);
+            }
+        }
+
+        // NEW: Reject Claim
+        async function rejectClaim() {
+            if (!isHost || !currentClaimId) return;
+            const claimRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId, 'claims', currentClaimId);
+            try {
+                await deleteDoc(claimRef); // Just delete the claim
+                claimModalContainer.classList.add('hidden');
+                // The onSnapshot listener for claims will auto-update the UI
+            } catch (error) {
+                console.error("Error rejecting claim: ", error);
+                showModal('Error', `Failed to reject claim: ${error.message}`);
+            }
+        }
+        
         // --- UI Logic and Event Listeners ---
         function showGameUI() {
             gameSetupArea.classList.add('hidden');
@@ -806,48 +934,26 @@
                 playerLobbyView.classList.remove('hidden');
                 playerInGameView.classList.add('hidden');
                 gameInfoDiv.classList.add('hidden');
+                if (!gameCard) {
+                    createBingoCard(); // Auto-generate a card for the player on join
+                }
             }
         }
         
-        hostLoginBtn.addEventListener('click', () => {
-            hostAccessPasswordArea.classList.remove('hidden');
-        });
-
-        hostAccessLoginBtn.addEventListener('click', () => {
-            if (hostAccessPasswordInput.value === SECRET_HOST_ACCESS_PASSWORD) {
-                hostAccessPasswordArea.classList.add('hidden');
-                hostLoginBtn.classList.add('hidden');
-                createGameBtn.classList.remove('hidden');
-                hostSetupDiv.classList.remove('hidden');
-                showModal('Success', 'Host access granted!');
-            } else {
-                showModal('Access Denied', 'Incorrect password.');
-            }
-        });
-
         createGameBtn.addEventListener('click', createGame);
-
-        joinGameBtn.addEventListener('click', async () => {
-            const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameIdInput.value.trim().toUpperCase());
-            const gameDoc = await getDoc(gameRef);
-            if (!gameDoc.exists()) {
-                 showModal('Game Not Found', 'The entered Game ID does not exist.');
-                 return;
-            }
-            if (gameDoc.data().hostPassword && hostPasswordInput.value.trim() === gameDoc.data().hostPassword) {
-                 checkHostAccess();
-            } else {
-                 joinGame();
-            }
-        });
-
-
+        joinGameBtn.addEventListener('click', joinGame);
         startGameBtn.addEventListener('click', startGame);
         drawNumberBtn.addEventListener('click', drawNumber);
         endGameBtn.addEventListener('click', endGame);
         leaveGameBtn.addEventListener('click', leaveGame);
+        leaveGameBtnLobby.addEventListener('click', leaveGame); // ADDED
         generateCardBtn.addEventListener('click', createBingoCard);
         bingoBtn.addEventListener('click', claimBingo);
+        
+        // NEW: Claim modal button listeners
+        claimApproveBtn.addEventListener('click', approveWinner);
+        claimRejectBtn.addEventListener('click', rejectClaim);
+
 
         function resetGame() {
             if (unsubscribeGameListener) unsubscribeGameListener();
@@ -857,6 +963,7 @@
             gameStateDiv.classList.add('hidden');
             hostViewDiv.classList.add('hidden');
             playerViewDiv.classList.add('hidden');
+            gameArea.classList.add('hidden'); // ADDED
             gameSetupArea.classList.remove('hidden');
             gameCard = null;
             markedNumbers = new Set();
@@ -866,10 +973,13 @@
             renderCalledNumbers([]);
             bingoCardContainer.innerHTML = '';
             gameIdInput.value = '';
-            usernameInput.value = '';
-            hostPasswordInput.value = '';
             feeInput.value = '';
-            hostSetupDiv.classList.add('hidden');
+
+            // Re-hide host UI in case a host is resetting
+            if (!isHostUser) {
+                createGameBtn.classList.add('hidden');
+                hostSetupDiv.classList.add('hidden');
+            }
         }
 
         // --- Initialization ---
@@ -879,6 +989,22 @@
                 const authResult = await signInAnonymously(auth);
                 userId = auth.currentUser.uid;
                 authInfo.textContent = `You are authenticated with User ID: ${userId}`;
+
+                // NEW: Check for host privileges
+                try {
+                    console.log("Checking for host with user ID:", userId);
+                    const hostRef = doc(db, 'hosts', userId);
+                    const hostDoc = await getDoc(hostRef);
+                    if (hostDoc.exists()) {
+                        isHostUser = true;
+                        createGameBtn.classList.remove('hidden');
+                        hostSetupDiv.classList.remove('hidden');
+                        authInfo.textContent += ' (HOST)'; // Let them know
+                    }
+                } catch (e) {
+                    console.error("Error checking host status: ", e);
+                }
+
             } catch (error) {
                 console.error("Authentication error: ", error);
                 showModal('Authentication Error', `Failed to authenticate with Firebase: ${error.message}`);
