@@ -649,9 +649,7 @@
                 showGameUI();
                 listenForGameUpdates();
                 
-                // Host approves themselves automatically
-                const username = usernameInput.value.trim() || 'Host';
-                await approvePlayer(userId, userId, username); // CHANGED
+                
 
                 showModal('Game Created!', `Game ID: <span class="font-mono font-bold text-blue-300">${gameId}</span>. Player Fee: ${fee}. You are the Host.`, true);
             } catch (error) {
