@@ -685,8 +685,7 @@
                         isHost = true;
                         showGameUI();
                         listenForGameUpdates();
-                        // Host adds themselves automatically
-                        await approvePlayer(userId, userId, username); 
+                    
                     } else {
                         // We are a player, show UI and send request
                         isHost = false;
