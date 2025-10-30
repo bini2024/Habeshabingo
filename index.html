@@ -342,7 +342,7 @@
         function speakNumber(number) {
             if (!isCallerEnabled) return;
             if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance(`The next number is ${number}`);
+                const utterance = new SpeechSynthesisUtterance(`${number}`);
                 utterance.pitch = 1;
                 utterance.rate = 1;
                 window.speechSynthesis.speak(utterance);
