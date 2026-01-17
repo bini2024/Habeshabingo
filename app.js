@@ -60,12 +60,21 @@ const gameSetupArea = document.getElementById('game-setup-area');
 const usernameInput = document.getElementById('username-input');
 const gameIdInput = document.getElementById('game-id-input');
 const feeInput = document.getElementById('fee-input');
+// IMPROVEMENT: Added Payment Input Reference
+const paymentInput = document.getElementById('payment-input'); 
+
 const joinGameBtn = document.getElementById('join-game-btn');
 const createGameBtn = document.getElementById('create-game-btn');
 const hostSetupDiv = document.getElementById('host-setup');
 const gameArea = document.getElementById('game-area');
 const gameStateDiv = document.getElementById('game-state');
 const currentGameIdDisplay = document.getElementById('current-game-id');
+// IMPROVEMENT: Added Copy Button Reference
+const copyIdBtn = document.getElementById('copy-id-btn');
+// IMPROVEMENT: Added Payment Display References
+const lobbyPaymentDisplay = document.getElementById('lobby-payment-display');
+const paymentInfoText = document.getElementById('payment-info-text');
+
 const hostViewDiv = document.getElementById('host-view');
 const hostLobbyView = document.getElementById('host-lobby-view');
 const hostInGameView = document.getElementById('host-in-game-view');
@@ -125,6 +134,19 @@ function showModal(title, message, isHtml = false) {
 modalOkBtn.addEventListener('click', () => {
     modalContainer.classList.add('hidden');
 });
+
+// IMPROVEMENT: Logic to Copy Game ID
+if (copyIdBtn) {
+    copyIdBtn.addEventListener('click', () => {
+        if(gameId) {
+            navigator.clipboard.writeText(gameId);
+            // Visual feedback
+            const originalIcon = copyIdBtn.innerHTML;
+            copyIdBtn.innerHTML = '<i class="fas fa-check text-green-400"></i>';
+            setTimeout(() => copyIdBtn.innerHTML = originalIcon, 2000);
+        }
+    });
+}
 
 function generateUniqueNumbers(count, min, max) {
     const numbers = new Set();
@@ -199,6 +221,7 @@ function toggleMarked(number, cell) {
     }
 }
 
+// IMPROVEMENT: Check Bingo with 4 Corners Logic
 function checkBingo() {
     if (!gameCard) return false;
     
@@ -208,7 +231,16 @@ function checkBingo() {
     lines.push(gameCard.map((col, i) => col[i])); // Diag 1
     lines.push(gameCard.map((col, i) => col[4 - i])); // Diag 2
     
-    return lines.some(line => line.every(num => markedNumbers.has(num)));
+    // NEW: 4 Corners Logic
+    // Indices: [0][0], [4][0], [0][4], [4][4]
+    const corners = [
+        gameCard[0][0], gameCard[4][0],
+        gameCard[0][4], gameCard[4][4]
+    ];
+    const isCorners = corners.every(num => markedNumbers.has(num));
+    
+    // Win if any line is complete OR 4 corners are marked
+    return lines.some(line => line.every(num => markedNumbers.has(num))) || isCorners;
 }
 
 function renderCalledNumbers(numbers) {
@@ -301,6 +333,7 @@ async function cancelJoinRequest() {
     }
 }
 
+// IMPROVEMENT: Updated to include Payment Info
 async function createGame() {
     if (!isHostUser) { 
         showModal('Error', 'You do not have permission to create a game.');
@@ -309,9 +342,14 @@ async function createGame() {
     
     const newGameId = `BINGO-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
     const fee = parseFloat(feeInput.value);
+    const paymentInfo = paymentInput.value.trim(); // Get Payment info
     
     if (isNaN(fee) || fee <= 0) {
         showModal('Missing Information', 'Please set a valid player fee.');
+        return;
+    }
+    if (!paymentInfo) {
+        showModal('Missing Information', 'Please enter payment details (e.g. Email for E-transfer).');
         return;
     }
 
@@ -320,6 +358,7 @@ async function createGame() {
         await setDoc(gameRef, {
             hostId: userId,
             fee: fee,
+            paymentInfo: paymentInfo, // Save to Firestore
             calledNumbers: [],
             createdAt: new Date(),
             status: 'waiting'
@@ -385,6 +424,13 @@ function listenForGameUpdates() {
     unsubscribeGameListener = onSnapshot(gameRef, (docSnapshot) => {
         if (docSnapshot.exists()) {
             const data = docSnapshot.data();
+            
+            // IMPROVEMENT: Display Payment Info
+            if(data.paymentInfo && lobbyPaymentDisplay && paymentInfoText) {
+                lobbyPaymentDisplay.classList.remove('hidden');
+                paymentInfoText.textContent = data.paymentInfo;
+            }
+
             const newCalledNumbers = data.calledNumbers || [];
             
             if (newCalledNumbers.length > calledNumbers.length) {
@@ -561,6 +607,7 @@ async function startGame() {
     }
 }
 
+// IMPROVEMENT: Updated to include Rolling Animation
 async function drawNumber() {
     if (!isHost) return;
     const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId);
@@ -576,16 +623,42 @@ async function drawNumber() {
         const remainingNumbers = allNumbers.filter(num => !currentCalledNumbers.includes(num));
         
         if (remainingNumbers.length > 0) {
-            const newNumber = remainingNumbers[Math.floor(Math.random() * remainingNumbers.length)];
-            await setDoc(gameRef, {
-                calledNumbers: [...currentCalledNumbers, newNumber]
-            }, { merge: true });
+            // ANIMATION START
+            // 1. Disable button
+            drawNumberBtn.disabled = true;
+            drawNumberBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            // 2. Add rolling class and placeholder
+            lastCalledNumberDisplay.classList.add('rolling');
+            lastCalledNumberDisplay.textContent = "??";
+
+            // 3. Wait 1 second before revealing
+            setTimeout(async () => {
+                const newNumber = remainingNumbers[Math.floor(Math.random() * remainingNumbers.length)];
+                
+                // 4. Remove animation class
+                lastCalledNumberDisplay.classList.remove('rolling');
+                lastCalledNumberDisplay.textContent = newNumber;
+
+                // 5. Save to Firestore
+                await setDoc(gameRef, {
+                    calledNumbers: [...currentCalledNumbers, newNumber]
+                }, { merge: true });
+
+                // 6. Re-enable button
+                drawNumberBtn.disabled = false;
+                drawNumberBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }, 1000); 
+
         } else {
             showModal('Game Over', 'All numbers have been called!');
         }
     } catch (error) {
         console.error("Error drawing number: ", error);
         showModal('Error', `Failed to draw a new number: ${error.message}`);
+        // Ensure button is re-enabled if error occurs
+        drawNumberBtn.disabled = false;
+        drawNumberBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        lastCalledNumberDisplay.classList.remove('rolling');
     }
 }
 
@@ -789,6 +862,10 @@ function resetGame() {
     bingoCardContainer.innerHTML = '';
     gameIdInput.value = '';
     feeInput.value = '';
+    // IMPROVEMENT: Reset Payment Fields
+    paymentInput.value = '';
+    lobbyPaymentDisplay.classList.add('hidden');
+
     myJoinRequestId = null;
     playerWaitingMessage.classList.add('hidden');
     playerLobbyTitle.textContent = 'Waiting for Host...';
