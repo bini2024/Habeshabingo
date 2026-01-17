@@ -49,7 +49,7 @@ body {
     grid-template-columns: repeat(auto-fit, minmax(3.5rem, 1fr));
     gap: 8px;
     padding: 1rem;
-    background-color: #374151; /* Darker gray */
+    background-color: #374151;
     border-radius: 12px;
 }
 .number-ball {
@@ -72,6 +72,8 @@ body {
     transform: scale(1.1);
     box-shadow: 0 6px 12px rgba(30, 64, 175, 0.5);
 }
+
+/* Animations */
 .fade-in {
     animation: fadeIn 0.5s ease-in-out;
 }
@@ -79,40 +81,34 @@ body {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
 }
-/* Base button style */
+
+/* Rolling Ball Animation */
+.rolling {
+    animation: roll 1s linear infinite;
+    background-color: #f59e0b !important; /* Yellow while rolling */
+    color: white !important;
+}
+@keyframes roll {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Button Styles */
 .btn {
     transition: transform 0.2s ease, background 0.3s ease, box-shadow 0.2s ease;
     transform-origin: center;
 }
-.btn:hover {
-    transform: scale(1.05);
-}
-.btn:active {
-    transform: scale(0.95);
-}
-.btn-primary {
-    background: #1e40af;
-    box-shadow: 0 4px 15px rgba(30, 64, 175, 0.4);
-}
-.btn-primary:hover {
-    background: #1c3c9b;
-}
-.btn-danger {
-    background-color: #dc2626;
-}
-.btn-danger:hover {
-    background-color: #b91c1c;
-}
-.btn-approve {
-    background-color: #16a34a; /* Green */
-}
-.btn-approve:hover {
-    background-color: #15803d;
-}
-/* Modal transitions */
-.modal-container {
-    transition: opacity 0.3s ease;
-}
+.btn:hover { transform: scale(1.05); }
+.btn:active { transform: scale(0.95); }
+.btn-primary { background: #1e40af; box-shadow: 0 4px 15px rgba(30, 64, 175, 0.4); }
+.btn-primary:hover { background: #1c3c9b; }
+.btn-danger { background-color: #dc2626; }
+.btn-danger:hover { background-color: #b91c1c; }
+.btn-approve { background-color: #16a34a; }
+.btn-approve:hover { background-color: #15803d; }
+
+/* Modal */
+.modal-container { transition: opacity 0.3s ease; }
 .modal-body {
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     transform: scale(0.95);
@@ -127,12 +123,6 @@ body {
     backdrop-filter: blur(5px);
 }
 @media (max-width: 640px) {
-    .bingo-cell {
-        font-size: 1rem;
-    }
-    .number-ball {
-        width: 3rem;
-        height: 3rem;
-        font-size: 1.25rem;
-    }
+    .bingo-cell { font-size: 1rem; }
+    .number-ball { width: 3rem; height: 3rem; font-size: 1.25rem; }
 }
