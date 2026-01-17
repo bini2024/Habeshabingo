@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Habesha Bingo</title>
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="style.css">
@@ -30,9 +29,9 @@
         <div class="modal-backdrop absolute inset-0"></div>
         <div class="modal-body bg-gray-800 rounded-xl shadow-2xl p-6 z-10 w-full max-w-md text-center">
             <h3 id="claim-modal-title" class="text-2xl font-bold mb-4 text-red-400">Verify Bingo Claim</h3>
-            <p class="mb-2 text-gray-300">Player's Card (Marked numbers were called):</p>
+            <p class="mb-2 text-gray-300">Player's Card:</p>
             <div id="claim-modal-card" class="bingo-card bg-gray-600 p-2 rounded-xl border-2 border-gray-500 mb-4"></div>
-            <p class="mb-2 text-gray-300">All Called Numbers:</p>
+            <p class="mb-2 text-gray-300">Called Numbers:</p>
             <div id="claim-modal-called-numbers" class="host-view max-h-32 overflow-y-auto mb-6"></div>
             <div class="flex justify-center space-x-4">
                 <button id="claim-reject-btn" class="btn btn-danger py-2 px-4 rounded-lg text-lg font-bold">Reject</button>
@@ -50,12 +49,12 @@
         <main id="game-setup-area" class="space-y-6">
             <div class="flex flex-col sm:flex-row items-center justify-center sm:justify-between space-y-4 sm:space-y-0 text-center sm:text-left">
                 <div class="space-y-2 w-full sm:w-auto">
-                    <label for="username-input" class="block font-bold text-gray-300">Enter Your Username:</label>
+                    <label for="username-input" class="block font-bold text-gray-300">Username:</label>
                     <input type="text" id="username-input" placeholder="e.g., JaneDoe" required
                            class="w-full sm:w-48 p-2 rounded-md bg-gray-700 text-white placeholder-gray-500 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all focus:scale-105">
                 </div>
                 <div class="space-y-2 w-full sm:w-auto">
-                    <label for="game-id-input" class="block font-bold text-gray-300">Enter Game ID:</label>
+                    <label for="game-id-input" class="block font-bold text-gray-300">Game ID:</label>
                     <input type="text" id="game-id-input" placeholder="e.g., BINGO123" class="w-full sm:w-48 p-2 rounded-md bg-gray-700 text-white placeholder-gray-500 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all focus:scale-105">
                 </div>
                 <div class="flex items-center space-x-2">
@@ -63,10 +62,16 @@
                     <button id="create-game-btn" class="btn btn-primary py-2 px-6 rounded-lg text-lg font-bold hidden">Create Game</button>
                 </div>
             </div>
-            <div id="host-setup" class="space-y-4 hidden">
+            
+            <div id="host-setup" class="space-y-4 hidden bg-gray-700 p-4 rounded-lg">
+                <h3 class="text-blue-300 font-bold text-lg">Host Settings</h3>
                 <div class="space-y-2">
-                    <label for="fee-input" class="block font-bold text-gray-300">Set Player Fee (Prize Amount):</label>
-                    <input type="number" id="fee-input" placeholder="e.g., 5" min="1" class="w-full p-2 rounded-md bg-gray-700 text-white placeholder-gray-500 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                    <label for="fee-input" class="block font-bold text-gray-300">Player Fee ($):</label>
+                    <input type="number" id="fee-input" placeholder="e.g., 5" min="1" class="w-full p-2 rounded-md bg-gray-600 text-white border border-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="space-y-2">
+                    <label for="payment-input" class="block font-bold text-gray-300">Payment Info (E-transfer):</label>
+                    <input type="text" id="payment-input" placeholder="e.g., email@example.com" class="w-full p-2 rounded-md bg-gray-600 text-white border border-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
             </div>
         </main>
@@ -74,7 +79,18 @@
         <main id="game-area" class="space-y-6 hidden">
             <div id="game-state" class="hidden">
                 <div class="bg-gray-700 rounded-xl p-4 text-center">
-                    <p id="current-game-id" class="text-xl font-bold text-blue-400 mb-2"></p>
+                    
+                    <div class="flex items-center justify-center space-x-3 mb-4 bg-gray-900 p-2 rounded-lg inline-block mx-auto">
+                        <p id="current-game-id" class="text-xl font-bold text-blue-400 font-mono tracking-wider"></p>
+                        <button id="copy-id-btn" class="text-gray-400 hover:text-white transition-colors" title="Copy Code">
+                            <i class="fas fa-copy text-xl"></i>
+                        </button>
+                    </div>
+
+                    <div id="lobby-payment-display" class="bg-green-900/50 border border-green-600 p-2 rounded mb-4 hidden">
+                        <p class="text-green-300 font-bold"> Send Payment To: <span id="payment-info-text" class="text-white select-all"></span></p>
+                    </div>
+
                     <div class="flex flex-col lg:flex-row items-start justify-between space-y-4 lg:space-y-0 lg:space-x-4">
                         
                         <div id="host-view" class="space-y-4 w-full lg:w-1/2 hidden">
@@ -92,12 +108,12 @@
                                 <div class="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4 mb-4">
                                     <button id="draw-number-btn" class="btn btn-primary py-2 px-6 rounded-lg text-lg font-bold">Draw Number</button>
                                     <div class="flex items-center space-x-2">
-                                        <label for="caller-toggle" class="text-white">Enable Caller</label>
+                                        <label for="caller-toggle" class="text-white text-sm">Voice</label>
                                         <input type="checkbox" id="caller-toggle" class="form-checkbox h-5 w-5 text-blue-600">
                                     </div>
                                 </div>
                                 <div class="flex items-center justify-center space-x-2">
-                                    <div id="last-called-number" class="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center font-bold text-3xl">--</div>
+                                    <div id="last-called-number" class="w-20 h-20 rounded-full bg-blue-500 flex items-center justify-center font-bold text-4xl border-4 border-blue-300 shadow-lg">--</div>
                                 </div>
                                 <div class="grid grid-cols-5 sm:grid-cols-10 gap-2 mt-4">
                                     <div id="called-numbers-display" class="col-span-full host-view"></div>
@@ -114,9 +130,9 @@
                             <div id="player-lobby-view" class="space-y-4">
                                 <h4 id="player-lobby-title" class="text-xl font-bold text-blue-300">Waiting for Host...</h4>
                                 <div id="player-waiting-message" class="p-4 bg-gray-900 rounded-lg text-center hidden">
-                                    <p class="text-yellow-400 font-bold">Your request to join has been sent.</p>
-                                    <p class="text-gray-300"> ክሳብ ፍቃድ ዝወሃበካ ተጸበ..</p>
-                                    <button id="cancel-join-request-btn" class="btn btn-danger py-1 px-3 rounded-lg text-sm font-bold mt-2">Cancel Request</button>
+                                    <p class="text-yellow-400 font-bold">Request Sent</p>
+                                    <p class="text-gray-300">Please wait for approval.</p>
+                                    <button id="cancel-join-request-btn" class="btn btn-danger py-1 px-3 rounded-lg text-sm font-bold mt-2">Cancel</button>
                                 </div>
                                 <ul id="players-ul-player" class="list-disc list-inside space-y-1 text-left max-h-48 overflow-y-auto p-2 bg-gray-800 rounded-md"></ul>
                                 <button id="generate-card-btn" class="btn btn-primary py-2 px-6 rounded-lg text-lg font-bold w-full">Generate Card</button>
@@ -129,7 +145,7 @@
                                 </div>
                                 <div id="bingo-card" class="bingo-card bg-gray-600 p-2 rounded-xl border-2 border-gray-500"></div>
                                 <div class="flex justify-center space-x-4">
-                                    <button id="bingo-btn" class="btn bg-red-500 hover:bg-red-600 text-white py-2 px-6 rounded-lg text-lg font-bold shadow-md">Bingo!</button>
+                                    <button id="bingo-btn" class="btn bg-red-500 hover:bg-red-600 text-white py-2 px-6 rounded-lg text-lg font-bold shadow-md transform hover:scale-110 transition-transform">BINGO!</button>
                                 </div>
                             </div>
                             <button id="leave-game-btn" class="btn btn-danger py-2 px-6 rounded-lg text-lg font-bold w-full mt-4">Leave Game</button>
@@ -137,20 +153,18 @@
                         
                         <div id="game-info" class="space-y-4 w-full lg:w-1/2 hidden">
                             <div id="rules-view" class="p-4 bg-gray-800 rounded-xl space-y-2">
-                                <h4 class="text-2xl font-bold text-blue-400 mb-2"> ሕግታት ናይ ጸወታ </h4>
-                                <ul class="list-disc list-inside text-left">
-                                    <li> ቅድሚ ምጅማርካ ካርድ ሒዝካ ምህላውካ ኣረጋግጽ.</li>
-                                    <li> መጻወቲ ገንዘብ ንኣጻዋቲ ብ E-transfer ስደድ .</li>
-                                    <li> ጸወታ ምስ ጀመረ ዘዝተጸውዕ ቁጽሪ ምልክት ግበር.</li>
-                                    <li> ዕዉትቲ መስመር እንተረኪብካ ተቀዳዲምካ 'ቢንጎ'  ጽቀጥ.(ቀዲሙ ዝበለ ይዕወት).</li>
-                                    <li> ዕዉታት መስመር ዝበሃላ ንጋድም, ንትኩል, ወይ ንድያጎናል.</li>
-                                    <li>ኣብ ማእከል "FREE" ትብል ምልክት ከም ዘለዋ ትሕሰብ.</li>
-                                    <li>ኣብ መወዳእታ ዕዉት ምስ ተረጋገጸ ዝተዓወቶ ገንዘብ ብ E-transfer ይለኣኮ. .</li>
+                                <h4 class="text-2xl font-bold text-blue-400 mb-2">Rules</h4>
+                                <ul class="list-disc list-inside text-left text-sm space-y-1">
+                                    <li>Ensure you have a card before starting.</li>
+                                    <li>Send fee to the host via E-transfer.</li>
+                                    <li>Mark numbers as they are called.</li>
+                                    <li>Win via: <strong>Horizontal, Vertical, Diagonal, or 4 Corners</strong>.</li>
+                                    <li>First to click BINGO wins!</li>
                                 </ul>
                             </div>
                             <div id="prize-view" class="p-4 bg-gray-800 rounded-xl space-y-2">
-                                <h4 class="text-2xl font-bold text-blue-400 mb-2">Winner's Prize</h4>
-                                <p id="fee-display" class="text-lg font-bold">Fee per player: --</p>
+                                <h4 class="text-2xl font-bold text-blue-400 mb-2">Prize Pool</h4>
+                                <p id="fee-display" class="text-lg font-bold">Fee: --</p>
                                 <p id="prize-amount" class="text-4xl font-extrabold text-green-400 drop-shadow-lg">--</p>
                             </div>
                         </div>
@@ -161,7 +175,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
-    
-    <script type="module" src="app.js"></script>
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>
