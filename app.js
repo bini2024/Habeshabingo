@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, addDoc, setDoc, onSnapshot, collection, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { firebaseConfig, playSound } from "./config.js";
+import { firebaseConfig, HOST_PIN, playSound } from "./config.js";
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
@@ -74,6 +74,11 @@ const paymentInput = document.getElementById('payment-input');
 const joinGameBtn = document.getElementById('join-game-btn');
 const createGameBtn = document.getElementById('create-game-btn');
 const hostSetupDiv = document.getElementById('host-setup');
+const hostPinBar = document.getElementById('host-pin-bar');
+const hostPinInput = document.getElementById('host-pin-input');
+const unlockHostBtn = document.getElementById('unlock-host-btn');
+const lockHostBtn = document.getElementById('lock-host-btn');
+
 const gameArea = document.getElementById('game-area');
 const gameStateDiv = document.getElementById('game-state');
 const currentGameIdDisplay = document.getElementById('current-game-id');
@@ -163,6 +168,55 @@ function showModal(title, message, isHtml = false) {
 modalOkBtn.addEventListener('click', () => {
     modalContainer.classList.add('hidden');
 });
+
+// --- Host PIN Unlock & Lock Logic ---
+function applyHostModeUI(unlocked) {
+    isHostUser = unlocked;
+    if (unlocked) {
+        createGameBtn.classList.remove('hidden');
+        hostSetupDiv.classList.remove('hidden');
+        hostPinBar.classList.add('hidden');
+    } else {
+        createGameBtn.classList.add('hidden');
+        hostSetupDiv.classList.add('hidden');
+        hostPinBar.classList.remove('hidden');
+    }
+}
+
+function unlockHostMode() {
+    const enteredPin = hostPinInput.value.trim();
+    if (!enteredPin) {
+        showToast('Please enter the Host PIN', 'warning');
+        return;
+    }
+    if (enteredPin === String(HOST_PIN)) {
+        localStorage.setItem('habesha_host_unlocked', 'true');
+        hostPinInput.value = '';
+        applyHostModeUI(true);
+        playSound('MARK');
+        showToast('Host Mode unlocked! You can now create or manage games.', 'success');
+    } else {
+        showToast('Incorrect Host PIN', 'error');
+    }
+}
+
+function lockHostMode() {
+    localStorage.removeItem('habesha_host_unlocked');
+    applyHostModeUI(false);
+    showToast('Host Mode locked', 'info');
+}
+
+if (unlockHostBtn) {
+    unlockHostBtn.addEventListener('click', unlockHostMode);
+}
+if (hostPinInput) {
+    hostPinInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') unlockHostMode();
+    });
+}
+if (lockHostBtn) {
+    lockHostBtn.addEventListener('click', lockHostMode);
+}
 
 // Copy Game ID
 if (copyIdBtn) {
@@ -285,7 +339,6 @@ function toggleMarked(number, cell) {
 function getWinningCells(cardMatrix, validSet) {
     if (!cardMatrix) return null;
 
-    // Check 5 Rows
     for (let row = 0; row < 5; row++) {
         const coords = [0, 1, 2, 3, 4].map(col => [col, row]);
         if (coords.every(([c, r]) => validSet.has(cardMatrix[c][r]))) {
@@ -293,7 +346,6 @@ function getWinningCells(cardMatrix, validSet) {
         }
     }
 
-    // Check 5 Columns
     const colLetters = ['B', 'I', 'N', 'G', 'O'];
     for (let col = 0; col < 5; col++) {
         const coords = [0, 1, 2, 3, 4].map(row => [col, row]);
@@ -302,29 +354,22 @@ function getWinningCells(cardMatrix, validSet) {
         }
     }
 
-    // Check Main Diagonal
     const diag1 = [0, 1, 2, 3, 4].map(i => [i, i]);
     if (diag1.every(([c, r]) => validSet.has(cardMatrix[c][r]))) {
         return { type: 'Diagonal', coords: diag1 };
     }
 
-    // Check Anti-Diagonal
     const diag2 = [0, 1, 2, 3, 4].map(i => [i, 4 - i]);
     if (diag2.every(([c, r]) => validSet.has(cardMatrix[c][r]))) {
         return { type: 'Diagonal', coords: diag2 };
     }
 
-    // Check 4 Corners
     const corners = [[0, 0], [4, 0], [0, 4], [4, 4]];
     if (corners.every(([c, r]) => validSet.has(cardMatrix[c][r]))) {
         return { type: '4 Corners', coords: corners };
     }
 
     return null;
-}
-
-function checkBingo() {
-    return Boolean(getWinningCells(gameCard, markedNumbers));
 }
 
 function renderCalledNumbers(numbers) {
@@ -348,7 +393,6 @@ function renderCalledNumbers(numbers) {
         lastCalledNumberDisplay.textContent = formatted;
         lastCalledNumberPlayerDisplay.textContent = formatted;
 
-        // Render last 5 called balls for player
         recentCallsPlayer.innerHTML = '';
         const recent = numbers.slice(-6, -1).reverse();
         if (recent.length === 0) {
@@ -435,7 +479,7 @@ async function cancelJoinRequest() {
 
 async function createGame() {
     if (!isHostUser) {
-        showModal('Error', 'You do not have host permissions to create a game.');
+        showModal('Host PIN Required', 'Please unlock Host Mode with your PIN first.');
         return;
     }
 
@@ -477,7 +521,7 @@ async function joinGame() {
     const username = usernameInput.value.trim();
     const inputId = gameIdInput.value.trim().toUpperCase();
 
-    if (!username) {
+    if (!username && !isHostUser) {
         showModal('Name Required', 'Please enter your name before joining.');
         return;
     }
@@ -486,7 +530,9 @@ async function joinGame() {
         return;
     }
 
-    localStorage.setItem('habesha_bingo_username', username);
+    if (username) {
+        localStorage.setItem('habesha_bingo_username', username);
+    }
 
     const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', inputId);
     try {
@@ -495,16 +541,17 @@ async function joinGame() {
             gameId = inputId;
             const gameData = gameDoc.data();
 
-            if (gameData.hostId === userId) {
+            // If user is the original creator OR has unlocked Host Mode via PIN, enter as Host
+            if (gameData.hostId === userId || isHostUser) {
                 isHost = true;
                 showGameUI();
                 listenForGameUpdates();
+                showToast(`Connected to ${gameId} as Host`, 'success');
             } else {
                 isHost = false;
                 showGameUI();
                 listenForGameUpdates();
 
-                // Check if player is already approved in this room
                 const playerDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId, 'players', userId));
                 if (!playerDoc.exists()) {
                     await requestToJoinGame();
@@ -548,7 +595,6 @@ function listenForGameUpdates() {
             calledNumbers = newCalledNumbers;
             renderCalledNumbers(calledNumbers);
 
-            // Always show Prize Pool & Rules in Lobby and In-Game
             gameInfoDiv.classList.remove('hidden');
 
             if (data.status === 'in-progress') {
@@ -810,7 +856,7 @@ async function endGame() {
 }
 
 async function leaveGame() {
-    if (gameId && userId) {
+    if (gameId && userId && !isHost) {
         const playerRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId, 'players', userId);
         try {
             await deleteDoc(playerRef);
@@ -832,7 +878,6 @@ function showClaimModal(claimData, claimId) {
     claimModalTitle.textContent = `Verify: ${claimData.username}`;
     const card = JSON.parse(claimData.card);
 
-    // Build set of genuinely called numbers + FREE space
     const validCalledSet = new Set([...calledNumbers, 'FREE']);
     const winCheck = getWinningCells(card, validCalledSet);
     const winningCoordSet = new Set(
@@ -944,7 +989,6 @@ function showGameUI() {
         playerLobbyView.classList.remove('hidden');
         playerInGameView.classList.add('hidden');
 
-        // Restore saved card for this room or create a fresh one
         if (!loadCardState(gameId)) {
             createBingoCard(true);
         } else {
@@ -992,10 +1036,7 @@ function resetGame() {
     playerWaitingMessage.classList.add('hidden');
     playerLobbyTitle.innerHTML = '<i class="fas fa-hourglass-half animate-spin text-sm"></i><span>Waiting for Host...</span>';
 
-    if (!isHostUser) {
-        createGameBtn.classList.add('hidden');
-        hostSetupDiv.classList.add('hidden');
-    }
+    applyHostModeUI(isHostUser);
 }
 
 // --- Initialization ---
@@ -1006,23 +1047,14 @@ window.onload = async function () {
         usernameInput.value = savedName;
     }
 
+    // Restore Host Mode if previously unlocked on this browser
+    const hostUnlocked = localStorage.getItem('habesha_host_unlocked') === 'true';
+    applyHostModeUI(hostUnlocked);
+
     try {
         await signInAnonymously(auth);
         userId = auth.currentUser.uid;
         authInfo.textContent = `User ID: ${userId}`;
-
-        try {
-            const hostRef = doc(db, 'hosts', userId);
-            const hostDoc = await getDoc(hostRef);
-            if (hostDoc.exists()) {
-                isHostUser = true;
-                createGameBtn.classList.remove('hidden');
-                hostSetupDiv.classList.remove('hidden');
-                authInfo.textContent += ' (HOST)';
-            }
-        } catch (e) {
-            console.error("Error checking host status: ", e);
-        }
     } catch (error) {
         console.error("Authentication error: ", error);
         showModal('Authentication Error', `Failed to authenticate with Firebase: ${error.message}`);
