@@ -1,3 +1,6 @@
+// Secret PIN to unlock Host Mode from any device
+export const HOST_PIN = "2026";
+
 // Firebase Configuration
 export const firebaseConfig = {
     apiKey: "AIzaSyCzDKc4iX8AlREzklyTUL6jG8eidiuDp-I",
@@ -29,7 +32,6 @@ export function playSound(type) {
         const now = ctx.currentTime;
 
         if (type === 'MARK') {
-            // Crisp tactile pop when daubing a cell
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.type = 'sine';
@@ -42,7 +44,6 @@ export function playSound(type) {
             osc.start(now);
             osc.stop(now + 0.09);
         } else if (type === 'DRAW') {
-            // Two-tone chime when a new ball is drawn
             [587.33, 880].forEach((freq, idx) => {
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
@@ -56,7 +57,6 @@ export function playSound(type) {
                 osc.stop(now + idx * 0.09 + 0.24);
             });
         } else if (type === 'BINGO') {
-            // Celebratory major arpeggio fanfare
             [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
