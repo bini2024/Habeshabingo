@@ -1,9 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, addDoc, setDoc, onSnapshot, collection, deleteDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-// Import Config from the other file
-import { firebaseConfig, AUDIO_DATA } from "./config.js";
+import { getFirestore, doc, getDoc, addDoc, setDoc, onSnapshot, collection, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { firebaseConfig, playSound } from "./config.js";
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
@@ -13,12 +11,22 @@ const db = getFirestore(app);
 const appId = firebaseConfig.appId;
 let userId = null;
 
-// --- SOUND EFFECTS ---
-const drawNumberSound = new Audio(AUDIO_DATA.DRAW);
-const markCellSound = new Audio(AUDIO_DATA.MARK);
-const bingoSound = new Audio(AUDIO_DATA.BINGO);
+// --- BINGO LETTER HELPER ---
+function getBingoLetter(num) {
+    if (num === 'FREE' || typeof num !== 'number') return '';
+    if (num <= 15) return 'B';
+    if (num <= 30) return 'I';
+    if (num <= 45) return 'N';
+    if (num <= 60) return 'G';
+    return 'O';
+}
 
-// --- CALLER API ---
+function formatBall(num) {
+    if (num === 'FREE' || typeof num !== 'number') return num;
+    return `${getBingoLetter(num)}-${num}`;
+}
+
+// --- CALLER SPEECH API ---
 let isCallerEnabled = true;
 const callerToggle = document.getElementById('caller-toggle');
 
@@ -28,18 +36,17 @@ callerToggle.addEventListener('change', (e) => {
 callerToggle.checked = isCallerEnabled;
 
 function speakNumber(number) {
-    if (!isCallerEnabled) return;
-    if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(`${number}`);
-        utterance.pitch = 1;
-        utterance.rate = 1;
-        window.speechSynthesis.speak(utterance);
-    } else {
-        console.warn('Web Speech API is not supported in this browser.');
-    }
+    if (!isCallerEnabled || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const letter = getBingoLetter(number);
+    const utterance = new SpeechSynthesisUtterance(`${letter} ${number}`);
+    utterance.pitch = 1.05;
+    utterance.rate = 0.95;
+    window.speechSynthesis.speak(utterance);
 }
 
 // --- UI Element References ---
+const toastContainer = document.getElementById('toast-container');
 const loadingSpinner = document.getElementById('loading-spinner');
 const modalContainer = document.getElementById('modal-container');
 const modalTitle = document.getElementById('modal-title');
@@ -48,7 +55,9 @@ const modalOkBtn = document.getElementById('modal-ok-btn');
 
 const claimModalContainer = document.getElementById('claim-modal-container');
 const claimModalTitle = document.getElementById('claim-modal-title');
+const claimVerificationBadge = document.getElementById('claim-verification-badge');
 const claimModalCard = document.getElementById('claim-modal-card');
+const claimCalledCount = document.getElementById('claim-called-count');
 const claimModalCalledNumbers = document.getElementById('claim-modal-called-numbers');
 const claimRejectBtn = document.getElementById('claim-reject-btn');
 const claimApproveBtn = document.getElementById('claim-approve-btn');
@@ -60,8 +69,7 @@ const gameSetupArea = document.getElementById('game-setup-area');
 const usernameInput = document.getElementById('username-input');
 const gameIdInput = document.getElementById('game-id-input');
 const feeInput = document.getElementById('fee-input');
-// IMPROVEMENT: Added Payment Input Reference
-const paymentInput = document.getElementById('payment-input'); 
+const paymentInput = document.getElementById('payment-input');
 
 const joinGameBtn = document.getElementById('join-game-btn');
 const createGameBtn = document.getElementById('create-game-btn');
@@ -69,9 +77,8 @@ const hostSetupDiv = document.getElementById('host-setup');
 const gameArea = document.getElementById('game-area');
 const gameStateDiv = document.getElementById('game-state');
 const currentGameIdDisplay = document.getElementById('current-game-id');
-// IMPROVEMENT: Added Copy Button Reference
+const gameStatusBadge = document.getElementById('game-status-badge');
 const copyIdBtn = document.getElementById('copy-id-btn');
-// IMPROVEMENT: Added Payment Display References
 const lobbyPaymentDisplay = document.getElementById('lobby-payment-display');
 const paymentInfoText = document.getElementById('payment-info-text');
 
@@ -83,45 +90,66 @@ const playerCountSpan = document.getElementById('player-count');
 const startGameBtn = document.getElementById('start-game-btn');
 const drawNumberBtn = document.getElementById('draw-number-btn');
 const lastCalledNumberDisplay = document.getElementById('last-called-number');
+const hostCalledCounter = document.getElementById('host-called-counter');
 const calledNumbersDisplay = document.getElementById('called-numbers-display');
 const claimsUl = document.getElementById('claims-ul');
 const endGameBtn = document.getElementById('end-game-btn');
+
 const playerViewDiv = document.getElementById('player-view');
 const playerLobbyView = document.getElementById('player-lobby-view');
 const playerInGameView = document.getElementById('player-in-game-view');
 const playersUlPlayer = document.getElementById('players-ul-player');
 const lastCalledNumberPlayerDisplay = document.getElementById('last-called-number-player');
+const playerCalledCount = document.getElementById('player-called-count');
+const recentCallsPlayer = document.getElementById('recent-calls-player');
 const bingoCardContainer = document.getElementById('bingo-card');
 const generateCardBtn = document.getElementById('generate-card-btn');
+const bingoActionWrapper = document.getElementById('bingo-action-wrapper');
 const bingoBtn = document.getElementById('bingo-btn');
 const leaveGameBtn = document.getElementById('leave-game-btn');
-const leaveGameBtnLobby = document.getElementById('leave-game-btn-lobby');
+
 const gameInfoDiv = document.getElementById('game-info');
-const rulesViewDiv = document.getElementById('rules-view');
-const prizeViewDiv = document.getElementById('prize-view');
 const feeDisplay = document.getElementById('fee-display');
 const prizeAmountDisplay = document.getElementById('prize-amount');
 
-// Waiting Room UI
 const joinRequestsList = document.getElementById('join-requests-list');
 const playerLobbyTitle = document.getElementById('player-lobby-title');
 const playerWaitingMessage = document.getElementById('player-waiting-message');
 const cancelJoinRequestBtn = document.getElementById('cancel-join-request-btn');
 
-// --- Game state variables ---
+// --- Game State Variables ---
 let gameId = null;
-let isHost = false; 
+let gameStatus = 'waiting';
+let isHost = false;
 let isHostUser = false;
 let gameCard = null;
 let calledNumbers = [];
-let markedNumbers = new Set();
+let markedNumbers = new Set(['FREE']);
 let unsubscribeGameListener;
 let unsubscribeClaimsListener;
 let unsubscribePlayersListener;
 let unsubscribeJoinRequestsListener;
-let myJoinRequestId = null; 
+let myJoinRequestId = null;
 
-// --- Utility Functions ---
+// --- Toast & Modal Helpers ---
+function showToast(message, type = 'info') {
+    const colors = {
+        info: 'bg-slate-800 border-blue-500/50 text-blue-200',
+        success: 'bg-emerald-950/90 border-emerald-500/50 text-emerald-200',
+        warning: 'bg-amber-950/90 border-amber-500/50 text-amber-200',
+        error: 'bg-rose-950/90 border-rose-500/50 text-rose-200'
+    };
+    const toast = document.createElement('div');
+    toast.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-xl backdrop-blur-md text-xs sm:text-sm font-semibold fade-in ${colors[type] || colors.info}`;
+    toast.textContent = message;
+    toastContainer.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.25s ease';
+        setTimeout(() => toast.remove(), 250);
+    }, 2600);
+}
+
 function showModal(title, message, isHtml = false) {
     modalTitle.textContent = title;
     if (isHtml) {
@@ -131,23 +159,51 @@ function showModal(title, message, isHtml = false) {
     }
     modalContainer.classList.remove('hidden');
 }
+
 modalOkBtn.addEventListener('click', () => {
     modalContainer.classList.add('hidden');
 });
 
-// IMPROVEMENT: Logic to Copy Game ID
+// Copy Game ID
 if (copyIdBtn) {
     copyIdBtn.addEventListener('click', () => {
-        if(gameId) {
+        if (gameId) {
             navigator.clipboard.writeText(gameId);
-            // Visual feedback
+            showToast(`Copied room code: ${gameId}`, 'success');
             const originalIcon = copyIdBtn.innerHTML;
-            copyIdBtn.innerHTML = '<i class="fas fa-check text-green-400"></i>';
-            setTimeout(() => copyIdBtn.innerHTML = originalIcon, 2000);
+            copyIdBtn.innerHTML = '<i class="fas fa-check text-emerald-400"></i>';
+            setTimeout(() => (copyIdBtn.innerHTML = originalIcon), 2000);
         }
     });
 }
 
+// --- LocalStorage Card Persistence ---
+function saveCardState() {
+    if (!gameId || !gameCard) return;
+    localStorage.setItem(`habesha_bingo_${gameId}`, JSON.stringify({
+        card: gameCard,
+        marked: Array.from(markedNumbers)
+    }));
+}
+
+function loadCardState(targetGameId) {
+    try {
+        const raw = localStorage.getItem(`habesha_bingo_${targetGameId}`);
+        if (!raw) return false;
+        const parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.card)) {
+            gameCard = parsed.card;
+            markedNumbers = new Set(parsed.marked || ['FREE']);
+            markedNumbers.add('FREE');
+            return true;
+        }
+    } catch (e) {
+        console.warn('Could not restore saved card:', e);
+    }
+    return false;
+}
+
+// --- Bingo Card Generation & Rendering ---
 function generateUniqueNumbers(count, min, max) {
     const numbers = new Set();
     while (numbers.size < count) {
@@ -156,36 +212,39 @@ function generateUniqueNumbers(count, min, max) {
     return Array.from(numbers);
 }
 
-function createBingoCard() {
-    const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId);
-    getDoc(gameRef).then(gameDoc => {
-        if (gameDoc.exists() && gameDoc.data().status === 'in-progress') {
-            showModal('Cannot Generate Card', 'The game has already started. You cannot generate a new card.');
-            return;
-        }
+function createBingoCard(silent = false) {
+    if (gameStatus === 'in-progress') {
+        showToast('Game is already in progress! Card is locked.', 'warning');
+        return;
+    }
 
-        gameCard = [
-            generateUniqueNumbers(5, 1, 15),
-            generateUniqueNumbers(5, 16, 30),
-            generateUniqueNumbers(5, 31, 45),
-            generateUniqueNumbers(5, 46, 60),
-            generateUniqueNumbers(5, 61, 75)
-        ];
-        gameCard[2][2] = 'FREE';
-        markedNumbers.clear();
-        markedNumbers.add('FREE');
-        renderBingoCard();
-        showModal('Card Generated!', 'Your unique Bingo card is ready. Good luck!');
-    });
+    gameCard = [
+        generateUniqueNumbers(5, 1, 15),
+        generateUniqueNumbers(5, 16, 30),
+        generateUniqueNumbers(5, 31, 45),
+        generateUniqueNumbers(5, 46, 60),
+        generateUniqueNumbers(5, 61, 75)
+    ];
+    gameCard[2][2] = 'FREE';
+    markedNumbers.clear();
+    markedNumbers.add('FREE');
+    saveCardState();
+    renderBingoCard();
+
+    if (!silent) {
+        playSound('MARK');
+        showToast('Generated a fresh Bingo card!', 'success');
+    }
 }
 
 function renderBingoCard() {
+    if (!gameCard) return;
     bingoCardContainer.innerHTML = '';
-    for (let j = 0; j < 5; j++) {
-        for (let i = 0; i < 5; i++) {
+    for (let row = 0; row < 5; row++) {
+        for (let col = 0; col < 5; col++) {
             const cell = document.createElement('div');
             cell.classList.add('bingo-cell');
-            const number = gameCard[i][j];
+            const number = gameCard[col][row];
             cell.textContent = number;
             if (number === 'FREE') {
                 cell.classList.add('free');
@@ -200,15 +259,15 @@ function renderBingoCard() {
 }
 
 function toggleMarked(number, cell) {
-    markCellSound.play().catch(e => console.error("Sound playback failed:", e));
-    const isNumberOnCard = gameCard.flat().includes(number);
-    const isCalled = calledNumbers.includes(number);
+    if (number === 'FREE') return;
 
-    if (!isNumberOnCard && number !== 'FREE') {
-        showModal('Invalid Action', 'This number is not on your card.');
+    if (gameStatus !== 'in-progress') {
+        showToast('Wait for the host to start the game!', 'info');
         return;
     }
-    if (isCalled || number === 'FREE') {
+
+    if (calledNumbers.includes(number)) {
+        playSound('MARK');
         if (markedNumbers.has(number)) {
             markedNumbers.delete(number);
             cell.classList.remove('marked');
@@ -216,64 +275,111 @@ function toggleMarked(number, cell) {
             markedNumbers.add(number);
             cell.classList.add('marked');
         }
+        saveCardState();
     } else {
-        showModal('Invalid Action', 'This number has not been called yet!');
+        showToast(`${formatBall(number)} hasn't been called yet!`, 'warning');
     }
 }
 
-// IMPROVEMENT: Check Bingo with 4 Corners Logic
+// --- Winning Pattern Detection (Returns Winning Coordinates) ---
+function getWinningCells(cardMatrix, validSet) {
+    if (!cardMatrix) return null;
+
+    // Check 5 Rows
+    for (let row = 0; row < 5; row++) {
+        const coords = [0, 1, 2, 3, 4].map(col => [col, row]);
+        if (coords.every(([c, r]) => validSet.has(cardMatrix[c][r]))) {
+            return { type: `Row ${row + 1}`, coords };
+        }
+    }
+
+    // Check 5 Columns
+    const colLetters = ['B', 'I', 'N', 'G', 'O'];
+    for (let col = 0; col < 5; col++) {
+        const coords = [0, 1, 2, 3, 4].map(row => [col, row]);
+        if (coords.every(([c, r]) => validSet.has(cardMatrix[c][r]))) {
+            return { type: `Column ${colLetters[col]}`, coords };
+        }
+    }
+
+    // Check Main Diagonal
+    const diag1 = [0, 1, 2, 3, 4].map(i => [i, i]);
+    if (diag1.every(([c, r]) => validSet.has(cardMatrix[c][r]))) {
+        return { type: 'Diagonal', coords: diag1 };
+    }
+
+    // Check Anti-Diagonal
+    const diag2 = [0, 1, 2, 3, 4].map(i => [i, 4 - i]);
+    if (diag2.every(([c, r]) => validSet.has(cardMatrix[c][r]))) {
+        return { type: 'Diagonal', coords: diag2 };
+    }
+
+    // Check 4 Corners
+    const corners = [[0, 0], [4, 0], [0, 4], [4, 4]];
+    if (corners.every(([c, r]) => validSet.has(cardMatrix[c][r]))) {
+        return { type: '4 Corners', coords: corners };
+    }
+
+    return null;
+}
+
 function checkBingo() {
-    if (!gameCard) return false;
-    
-    const lines = [];
-    for (let j = 0; j < 5; j++) lines.push(gameCard.map(col => col[j])); // Rows
-    lines.push(...gameCard); // Columns
-    lines.push(gameCard.map((col, i) => col[i])); // Diag 1
-    lines.push(gameCard.map((col, i) => col[4 - i])); // Diag 2
-    
-    // NEW: 4 Corners Logic
-    // Indices: [0][0], [4][0], [0][4], [4][4]
-    const corners = [
-        gameCard[0][0], gameCard[4][0],
-        gameCard[0][4], gameCard[4][4]
-    ];
-    const isCorners = corners.every(num => markedNumbers.has(num));
-    
-    // Win if any line is complete OR 4 corners are marked
-    return lines.some(line => line.every(num => markedNumbers.has(num))) || isCorners;
+    return Boolean(getWinningCells(gameCard, markedNumbers));
 }
 
 function renderCalledNumbers(numbers) {
     calledNumbersDisplay.innerHTML = '';
-    numbers.forEach(num => {
+    hostCalledCounter.textContent = `${numbers.length} / 75`;
+    playerCalledCount.textContent = `${numbers.length} / 75 called`;
+
+    numbers.forEach((num, idx) => {
         const numberBall = document.createElement('div');
-        numberBall.classList.add('number-ball', 'called-number', 'fade-in');
-        numberBall.textContent = num;
+        numberBall.classList.add('number-ball', 'fade-in');
+        if (idx === numbers.length - 1) {
+            numberBall.classList.add('latest-ball');
+        }
+        numberBall.textContent = formatBall(num);
         calledNumbersDisplay.appendChild(numberBall);
     });
+
     if (numbers.length > 0) {
         const lastNum = numbers[numbers.length - 1];
-        lastCalledNumberDisplay.textContent = lastNum;
-        lastCalledNumberPlayerDisplay.textContent = lastNum;
+        const formatted = formatBall(lastNum);
+        lastCalledNumberDisplay.textContent = formatted;
+        lastCalledNumberPlayerDisplay.textContent = formatted;
+
+        // Render last 5 called balls for player
+        recentCallsPlayer.innerHTML = '';
+        const recent = numbers.slice(-6, -1).reverse();
+        if (recent.length === 0) {
+            recentCallsPlayer.innerHTML = '<span class="text-xs text-slate-500">First ball drawn</span>';
+        } else {
+            recent.forEach(num => {
+                const badge = document.createElement('span');
+                badge.className = 'px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-xs font-mono font-bold text-slate-200';
+                badge.textContent = formatBall(num);
+                recentCallsPlayer.appendChild(badge);
+            });
+        }
     } else {
         lastCalledNumberDisplay.textContent = '--';
         lastCalledNumberPlayerDisplay.textContent = '--';
+        recentCallsPlayer.innerHTML = '<span class="text-xs text-slate-500 italic">No balls drawn yet</span>';
     }
 }
 
-// --- Firebase Integration ---
-
+// --- Firebase Operations ---
 async function approvePlayer(requestId, playerUserId, playerUsername) {
     if (!isHost) return;
-    
     const playerRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId, 'players', playerUserId);
     try {
         await setDoc(playerRef, {
             userId: playerUserId,
             username: playerUsername,
-            joinedAt: new Date(),
+            joinedAt: new Date()
         });
-        await rejectPlayer(requestId); 
+        await rejectPlayer(requestId);
+        showToast(`Approved ${playerUsername}`, 'success');
     } catch (error) {
         console.error("Error approving player: ", error);
         showModal('Error', `Failed to approve player: ${error.message}`);
@@ -282,7 +388,6 @@ async function approvePlayer(requestId, playerUserId, playerUsername) {
 
 async function rejectPlayer(requestId) {
     if (!isHost) return;
-    
     const requestRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId, 'joinRequests', requestId);
     try {
         await deleteDoc(requestRef);
@@ -295,24 +400,20 @@ async function rejectPlayer(requestId) {
 async function requestToJoinGame() {
     const username = usernameInput.value.trim();
     if (!username) {
-        showModal('Username Required', 'Please enter a username.');
+        showModal('Name Required', 'Please enter your name.');
         return;
     }
-    
+
     const requestRef = collection(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId, 'joinRequests');
     try {
-        myJoinRequestId = userId; 
+        myJoinRequestId = userId;
         const requestDocRef = doc(requestRef, myJoinRequestId);
-        
         await setDoc(requestDocRef, {
             userId: userId,
             username: username,
-            requestedAt: new Date(),
+            requestedAt: new Date()
         });
-        
         playerWaitingMessage.classList.remove('hidden');
-        generateCardBtn.classList.add('hidden'); 
-        
     } catch (error) {
         console.error("Error requesting to join: ", error);
         showModal('Error', `Failed to send join request: ${error.message}`);
@@ -321,35 +422,33 @@ async function requestToJoinGame() {
 
 async function cancelJoinRequest() {
     if (!gameId || !myJoinRequestId) return;
-    
     const requestRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId, 'joinRequests', myJoinRequestId);
     try {
         await deleteDoc(requestRef);
         playerWaitingMessage.classList.add('hidden');
-        generateCardBtn.classList.remove('hidden');
         myJoinRequestId = null;
+        showToast('Join request cancelled', 'info');
     } catch (error) {
         console.error("Error cancelling request: ", error);
     }
 }
 
-// IMPROVEMENT: Updated to include Payment Info
 async function createGame() {
-    if (!isHostUser) { 
-        showModal('Error', 'You do not have permission to create a game.');
+    if (!isHostUser) {
+        showModal('Error', 'You do not have host permissions to create a game.');
         return;
     }
-    
-    const newGameId = `BINGO-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+    const newGameId = `BINGO-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
     const fee = parseFloat(feeInput.value);
-    const paymentInfo = paymentInput.value.trim(); // Get Payment info
-    
+    const paymentInfo = paymentInput.value.trim();
+
     if (isNaN(fee) || fee <= 0) {
-        showModal('Missing Information', 'Please set a valid player fee.');
+        showModal('Missing Fee', 'Please enter a valid entry fee per player.');
         return;
     }
     if (!paymentInfo) {
-        showModal('Missing Information', 'Please enter payment details (e.g. Email for E-transfer).');
+        showModal('Missing Payment Info', 'Please enter your E-Transfer email or phone number.');
         return;
     }
 
@@ -358,17 +457,16 @@ async function createGame() {
         await setDoc(gameRef, {
             hostId: userId,
             fee: fee,
-            paymentInfo: paymentInfo, // Save to Firestore
+            paymentInfo: paymentInfo,
             calledNumbers: [],
             createdAt: new Date(),
             status: 'waiting'
         });
         gameId = newGameId;
-        isHost = true; 
+        isHost = true;
         showGameUI();
         listenForGameUpdates();
-        
-        showModal('Game Created!', `Game ID: <span class="font-mono font-bold text-blue-300">${gameId}</span>. Player Fee: ${fee}. You are the Host.`, true);
+        showToast(`Room ${gameId} created!`, 'success');
     } catch (error) {
         console.error("Error creating game: ", error);
         showModal('Error', `Failed to create a new game: ${error.message}`);
@@ -378,23 +476,26 @@ async function createGame() {
 async function joinGame() {
     const username = usernameInput.value.trim();
     const inputId = gameIdInput.value.trim().toUpperCase();
-    
+
     if (!username) {
-        showModal('Username Required', 'Please enter a username before joining a game.');
+        showModal('Name Required', 'Please enter your name before joining.');
         return;
     }
     if (!inputId) {
-        showModal('Invalid ID', 'Please enter a valid Game ID.');
+        showModal('Invalid Room Code', 'Please enter a valid Room Code.');
         return;
     }
-    
+
+    localStorage.setItem('habesha_bingo_username', username);
+
     const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', inputId);
     try {
         const gameDoc = await getDoc(gameRef);
         if (gameDoc.exists()) {
             gameId = inputId;
-            
-            if (gameDoc.data().hostId === userId) {
+            const gameData = gameDoc.data();
+
+            if (gameData.hostId === userId) {
                 isHost = true;
                 showGameUI();
                 listenForGameUpdates();
@@ -402,11 +503,15 @@ async function joinGame() {
                 isHost = false;
                 showGameUI();
                 listenForGameUpdates();
-                await requestToJoinGame(); 
+
+                // Check if player is already approved in this room
+                const playerDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId, 'players', userId));
+                if (!playerDoc.exists()) {
+                    await requestToJoinGame();
+                }
             }
-            
         } else {
-            showModal('Game Not Found', 'The entered Game ID does not exist.');
+            showModal('Room Not Found', 'No active game found with that Room Code.');
         }
     } catch (error) {
         console.error("Error joining game: ", error);
@@ -424,173 +529,182 @@ function listenForGameUpdates() {
     unsubscribeGameListener = onSnapshot(gameRef, (docSnapshot) => {
         if (docSnapshot.exists()) {
             const data = docSnapshot.data();
-            
-            // IMPROVEMENT: Display Payment Info
-            if(data.paymentInfo && lobbyPaymentDisplay && paymentInfoText) {
+            gameStatus = data.status;
+
+            if (data.paymentInfo && lobbyPaymentDisplay && paymentInfoText) {
                 lobbyPaymentDisplay.classList.remove('hidden');
                 paymentInfoText.textContent = data.paymentInfo;
             }
 
             const newCalledNumbers = data.calledNumbers || [];
-            
             if (newCalledNumbers.length > calledNumbers.length) {
                 const lastNumber = newCalledNumbers[newCalledNumbers.length - 1];
-                drawNumberSound.play().catch(e => console.error("Sound playback failed:", e));
+                playSound('DRAW');
                 if (isHost) {
                     speakNumber(lastNumber);
                 }
             }
-            
+
             calledNumbers = newCalledNumbers;
             renderCalledNumbers(calledNumbers);
-            
+
+            // Always show Prize Pool & Rules in Lobby and In-Game
+            gameInfoDiv.classList.remove('hidden');
+
             if (data.status === 'in-progress') {
+                gameStatusBadge.textContent = 'Live In-Game';
+                gameStatusBadge.className = 'text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
                 hostLobbyView.classList.add('hidden');
                 hostInGameView.classList.remove('hidden');
                 playerLobbyView.classList.add('hidden');
                 playerInGameView.classList.remove('hidden');
-                gameInfoDiv.classList.remove('hidden');
-                leaveGameBtn.classList.remove('hidden'); 
-                leaveGameBtnLobby.classList.add('hidden'); 
-
+                bingoActionWrapper.classList.remove('hidden');
             } else if (data.status === 'waiting') {
+                gameStatusBadge.textContent = 'Lobby Open';
+                gameStatusBadge.className = 'text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/30';
                 hostLobbyView.classList.remove('hidden');
                 hostInGameView.classList.add('hidden');
                 playerLobbyView.classList.remove('hidden');
                 playerInGameView.classList.add('hidden');
-                gameInfoDiv.classList.add('hidden');
-                leaveGameBtn.classList.add('hidden'); 
-                leaveGameBtnLobby.classList.remove('hidden'); 
-
+                bingoActionWrapper.classList.add('hidden');
             } else if (data.status === 'finished') {
-                showModal('Game Over!', `The winner is ${data.winner}! Thanks for playing.`);
+                playSound('BINGO');
+                confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 } });
+                const prizeText = data.finalPrize ? ` ($${Number(data.finalPrize).toFixed(2)} Prize)` : '';
+                showModal('Winner Announced!', `🎉 ${data.winner} won the Bingo game${prizeText}!`);
                 modalOkBtn.onclick = () => {
                     modalContainer.classList.add('hidden');
                     resetGame();
-                    modalOkBtn.onclick = () => modalContainer.classList.add('hidden'); 
+                    modalOkBtn.onclick = () => modalContainer.classList.add('hidden');
                 };
             } else if (data.status === 'cancelled') {
-                showModal('Game Cancelled', 'The host has cancelled the game.');
+                showModal('Game Cancelled', 'The host has ended the game.');
                 resetGame();
             }
         } else {
-            showModal('Game Ended', 'The host has ended the game.');
+            showModal('Game Closed', 'The game room was closed.');
             resetGame();
         }
     }, (error) => {
         console.error("Error listening to game updates:", error);
-        showModal('Error', `Failed to get real-time game updates: ${error.message}`);
     });
 
     const claimsRef = collection(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId, 'claims');
     unsubscribeClaimsListener = onSnapshot(claimsRef, (querySnapshot) => {
         claimsUl.innerHTML = '';
         const claims = [];
-        querySnapshot.forEach((doc) => {
-            claims.push({ id: doc.id, ...doc.data() }); 
+        querySnapshot.forEach((docSnap) => {
+            claims.push({ id: docSnap.id, ...docSnap.data() });
         });
-        
+
+        if (claims.length === 0) {
+            claimsUl.innerHTML = '<li class="text-xs text-slate-400 italic">No active claims yet.</li>';
+            return;
+        }
+
+        if (isHost) playSound('BINGO');
+
         claims.forEach(claim => {
             const listItem = document.createElement('li');
             const claimButton = document.createElement('button');
-            claimButton.classList.add('btn', 'btn-danger', 'w-full', 'text-left', 'px-4', 'py-2', 'rounded-lg');
-            claimButton.innerHTML = `<span class="font-bold">${claim.username}</span> claimed BINGO!`;
-            
-            claimButton.addEventListener('click', () => {
-                showClaimModal(claim, claim.id);
-            });
-            
+            claimButton.className = 'w-full bg-rose-600 hover:bg-rose-500 text-white text-left px-4 py-2.5 rounded-xl font-semibold flex items-center justify-between transition-all shadow-md';
+            claimButton.innerHTML = `
+                <span><i class="fas fa-trophy text-amber-300 mr-2"></i><strong>${claim.username}</strong> claimed BINGO!</span>
+                <span class="text-xs bg-white/20 px-2.5 py-1 rounded-lg font-bold">Verify →</span>
+            `;
+            claimButton.addEventListener('click', () => showClaimModal(claim, claim.id));
             listItem.appendChild(claimButton);
             claimsUl.appendChild(listItem);
         });
-    }, (error) => {
-        console.error("Error listening to claims:", error);
-        showModal('Error', `Failed to get real-time claim updates: ${error.message}`);
     });
-    
+
     const playersRef = collection(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId, 'players');
     unsubscribePlayersListener = onSnapshot(playersRef, (querySnapshot) => {
         playersUl.innerHTML = '';
         playersUlPlayer.innerHTML = '';
         const players = [];
-        let playerIsApproved = false; 
-        
-        querySnapshot.forEach((doc) => {
-            const playerData = doc.data();
+        let playerIsApproved = false;
+
+        querySnapshot.forEach((docSnap) => {
+            const playerData = docSnap.data();
             players.push(playerData);
-            if (playerData.userId === userId) { 
+            if (playerData.userId === userId) {
                 playerIsApproved = true;
             }
         });
 
         playerCountSpan.textContent = players.length;
-        
-        players.forEach(player => {
-            const listItem = document.createElement('li');
-            listItem.classList.add('text-lg');
-            listItem.textContent = player.username;
-            playersUl.appendChild(listItem);
-            
-            const playerLobbyItem = document.createElement('li');
-            playerLobbyItem.classList.add('text-lg');
-            playerLobbyItem.textContent = player.username;
-            playersUlPlayer.appendChild(playerLobbyItem.cloneNode(true));
-        });
-        
+
+        if (players.length === 0) {
+            playersUl.innerHTML = '<li class="col-span-full text-xs text-slate-500 italic">No players approved yet.</li>';
+            playersUlPlayer.innerHTML = '<li class="col-span-full text-xs text-slate-500 italic">Waiting for players...</li>';
+        } else {
+            players.forEach(player => {
+                const badgeClass = 'px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 font-medium truncate flex items-center space-x-1.5';
+                const liHost = document.createElement('li');
+                liHost.className = badgeClass;
+                liHost.innerHTML = `<i class="fas fa-user-check text-emerald-400 text-xs"></i><span class="truncate">${player.username}</span>`;
+                playersUl.appendChild(liHost);
+
+                const liPlayer = liHost.cloneNode(true);
+                playersUlPlayer.appendChild(liPlayer);
+            });
+        }
+
         if (!isHost && playerIsApproved) {
             playerWaitingMessage.classList.add('hidden');
-            generateCardBtn.classList.remove('hidden');
-            playerLobbyTitle.textContent = 'You are in!';
-            myJoinRequestId = null; 
+            playerLobbyTitle.innerHTML = '<i class="fas fa-check-circle text-emerald-400"></i><span>Approved! Ready for Host</span>';
+            myJoinRequestId = null;
         }
-        
+
         const gameDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId);
         getDoc(gameDocRef).then(docSnapshot => {
+            if (!docSnapshot.exists()) return;
             const fee = docSnapshot.data().fee || 0;
             const prize = (players.length * fee) * 0.8;
-            feeDisplay.textContent = `Fee per player: $${fee.toFixed(2)}`;
+            feeDisplay.textContent = `Entry Fee: $${fee.toFixed(2)} / player`;
             prizeAmountDisplay.textContent = `$${prize.toFixed(2)}`;
         });
-    }, (error) => {
-        console.error("Error listening to players:", error);
-        showModal('Error', `Failed to get real-time player list: ${error.message}`);
     });
 
     if (isHost) {
         const requestsRef = collection(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId, 'joinRequests');
         unsubscribeJoinRequestsListener = onSnapshot(requestsRef, (querySnapshot) => {
             joinRequestsList.innerHTML = '';
-            querySnapshot.forEach((doc) => {
-                const request = doc.data();
-                const requestId = doc.id;
-                
+            if (querySnapshot.empty) {
+                joinRequestsList.innerHTML = '<li class="text-xs text-slate-500 italic">No pending requests.</li>';
+                return;
+            }
+            querySnapshot.forEach((docSnap) => {
+                const request = docSnap.data();
+                const requestId = docSnap.id;
+
                 const li = document.createElement('li');
-                li.className = 'flex items-center justify-between bg-gray-700 p-2 rounded';
-                
+                li.className = 'flex items-center justify-between bg-slate-900 px-3.5 py-2 rounded-xl border border-slate-800';
+
                 const usernameSpan = document.createElement('span');
+                usernameSpan.className = 'font-semibold text-white';
                 usernameSpan.textContent = request.username;
                 li.appendChild(usernameSpan);
-                
+
                 const buttonsDiv = document.createElement('div');
-                buttonsDiv.className = 'space-x-2';
-                
+                buttonsDiv.className = 'flex items-center space-x-2';
+
                 const approveBtn = document.createElement('button');
-                approveBtn.textContent = 'Approve';
-                approveBtn.className = 'btn btn-approve py-1 px-2 text-sm rounded';
+                approveBtn.innerHTML = '<i class="fas fa-check mr-1"></i>Approve';
+                approveBtn.className = 'bg-emerald-600 hover:bg-emerald-500 text-white py-1 px-3 text-xs font-bold rounded-lg transition-all';
                 approveBtn.onclick = () => approvePlayer(requestId, request.userId, request.username);
                 buttonsDiv.appendChild(approveBtn);
-                
+
                 const rejectBtn = document.createElement('button');
-                rejectBtn.textContent = 'Reject';
-                rejectBtn.className = 'btn btn-danger py-1 px-2 text-sm rounded';
+                rejectBtn.innerHTML = '<i class="fas fa-times"></i>';
+                rejectBtn.className = 'bg-rose-600/80 hover:bg-rose-600 text-white py-1 px-2.5 text-xs font-bold rounded-lg transition-all';
                 rejectBtn.onclick = () => rejectPlayer(requestId);
                 buttonsDiv.appendChild(rejectBtn);
-                
+
                 li.appendChild(buttonsDiv);
                 joinRequestsList.appendChild(li);
             });
-        }, (error) => {
-            console.error("Error listening to join requests:", error);
         });
     }
 }
@@ -600,14 +714,13 @@ async function startGame() {
     const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId);
     try {
         await setDoc(gameRef, { status: 'in-progress' }, { merge: true });
-        showModal('Game Started!', 'The game has officially begun. Start drawing numbers!');
+        showToast('Game started! Draw the first ball.', 'success');
     } catch (error) {
         console.error("Error starting game: ", error);
         showModal('Error', `Failed to start the game: ${error.message}`);
     }
 }
 
-// IMPROVEMENT: Updated to include Rolling Animation
 async function drawNumber() {
     if (!isHost) return;
     const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId);
@@ -615,47 +728,37 @@ async function drawNumber() {
         const gameDoc = await getDoc(gameRef);
         const data = gameDoc.data();
         if (data.status !== 'in-progress') {
-            showModal('Game Not Started', 'Please click "Start Game" first!');
+            showToast('Please start the game first!', 'warning');
             return;
         }
         const currentCalledNumbers = data.calledNumbers || [];
         const allNumbers = Array.from({ length: 75 }, (_, i) => i + 1);
         const remainingNumbers = allNumbers.filter(num => !currentCalledNumbers.includes(num));
-        
+
         if (remainingNumbers.length > 0) {
-            // ANIMATION START
-            // 1. Disable button
             drawNumberBtn.disabled = true;
             drawNumberBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            // 2. Add rolling class and placeholder
             lastCalledNumberDisplay.classList.add('rolling');
-            lastCalledNumberDisplay.textContent = "??";
+            lastCalledNumberDisplay.textContent = '...';
 
-            // 3. Wait 1 second before revealing
             setTimeout(async () => {
                 const newNumber = remainingNumbers[Math.floor(Math.random() * remainingNumbers.length)];
-                
-                // 4. Remove animation class
                 lastCalledNumberDisplay.classList.remove('rolling');
-                lastCalledNumberDisplay.textContent = newNumber;
+                lastCalledNumberDisplay.textContent = formatBall(newNumber);
 
-                // 5. Save to Firestore
                 await setDoc(gameRef, {
                     calledNumbers: [...currentCalledNumbers, newNumber]
                 }, { merge: true });
 
-                // 6. Re-enable button
                 drawNumberBtn.disabled = false;
                 drawNumberBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            }, 1000); 
-
+            }, 700);
         } else {
-            showModal('Game Over', 'All numbers have been called!');
+            showModal('All Balls Drawn', 'All 75 numbers have been called!');
         }
     } catch (error) {
         console.error("Error drawing number: ", error);
         showModal('Error', `Failed to draw a new number: ${error.message}`);
-        // Ensure button is re-enabled if error occurs
         drawNumberBtn.disabled = false;
         drawNumberBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         lastCalledNumberDisplay.classList.remove('rolling');
@@ -663,17 +766,14 @@ async function drawNumber() {
 }
 
 async function claimBingo() {
-    const username = usernameInput.value.trim();
+    const username = usernameInput.value.trim() || localStorage.getItem('habesha_bingo_username') || 'Player';
     if (!gameCard) {
-        showModal('Card Not Generated', 'You must generate a bingo card first.');
+        showToast('Generate a Bingo card first!', 'warning');
         return;
     }
-    if (!username) {
-        showModal('Username Required', 'Please enter a username before claiming Bingo.');
-        return;
-    }
-    if (checkBingo()) {
-        bingoSound.play().catch(e => console.error("Sound playback failed:", e));
+    const winResult = getWinningCells(gameCard, markedNumbers);
+    if (winResult) {
+        playSound('BINGO');
         confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
 
         const claimsRef = collection(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId, 'claims');
@@ -681,16 +781,17 @@ async function claimBingo() {
             await addDoc(claimsRef, {
                 userId: userId,
                 username: username,
+                pattern: winResult.type,
                 claimedAt: new Date(),
-                card: JSON.stringify(gameCard) 
+                card: JSON.stringify(gameCard)
             });
-            showModal('BINGO!', 'You have successfully claimed Bingo! The host is verifying your card.');
+            showModal('BINGO CLAIM SENT!', `Your ${winResult.type} Bingo claim has been sent to the host for verification!`);
         } catch (error) {
             console.error("Error claiming bingo:", error);
             showModal('Error', `Failed to claim Bingo: ${error.message}`);
         }
     } else {
-        showModal('Not a Bingo!', 'Keep playing, you do not have Bingo yet!');
+        showToast('No complete winning pattern marked yet! Keep going.', 'warning');
     }
 }
 
@@ -714,64 +815,83 @@ async function leaveGame() {
         try {
             await deleteDoc(playerRef);
         } catch (error) {
-            console.error("Error leaving game (deleting player doc): ", error);
+            console.error("Error leaving game: ", error);
         }
     }
     if (myJoinRequestId) {
         await cancelJoinRequest();
     }
-    
     resetGame();
-    showModal('Game Left', 'You have left the game.');
+    showToast('You left the room', 'info');
 }
 
 function showClaimModal(claimData, claimId) {
     currentClaimId = claimId;
     currentClaimData = claimData;
-    
+
     claimModalTitle.textContent = `Verify: ${claimData.username}`;
     const card = JSON.parse(claimData.card);
-    
+
+    // Build set of genuinely called numbers + FREE space
+    const validCalledSet = new Set([...calledNumbers, 'FREE']);
+    const winCheck = getWinningCells(card, validCalledSet);
+    const winningCoordSet = new Set(
+        winCheck ? winCheck.coords.map(([c, r]) => `${c},${r}`) : []
+    );
+
+    if (winCheck) {
+        claimVerificationBadge.innerHTML = `
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                <i class="fas fa-check-circle mr-1.5"></i> Valid Bingo (${winCheck.type})
+            </span>`;
+    } else {
+        claimVerificationBadge.innerHTML = `
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                <i class="fas fa-exclamation-triangle mr-1.5"></i> No Valid Pattern Found
+            </span>`;
+    }
+
     claimModalCard.innerHTML = '';
-    for (let j = 0; j < 5; j++) {
-        for (let i = 0; i < 5; i++) {
+    for (let row = 0; row < 5; row++) {
+        for (let col = 0; col < 5; col++) {
             const cell = document.createElement('div');
             cell.classList.add('bingo-cell');
-            const number = card[i][j];
+            const number = card[col][row];
             cell.textContent = number;
             if (number === 'FREE') {
                 cell.classList.add('free');
             }
-            if (calledNumbers.includes(number)) {
+            if (validCalledSet.has(number)) {
                 cell.classList.add('marked');
+            }
+            if (winningCoordSet.has(`${col},${row}`)) {
+                cell.classList.add('winning-cell');
             }
             claimModalCard.appendChild(cell);
         }
     }
-    
+
+    claimCalledCount.textContent = calledNumbers.length;
     claimModalCalledNumbers.innerHTML = '';
     calledNumbers.forEach(num => {
         const numberBall = document.createElement('div');
-        numberBall.classList.add('number-ball', 'called-number');
-        numberBall.style.width = '3rem';
-        numberBall.style.height = '3rem';
-        numberBall.style.fontSize = '1rem';
-        numberBall.textContent = num;
+        numberBall.classList.add('number-ball');
+        numberBall.textContent = formatBall(num);
         claimModalCalledNumbers.appendChild(numberBall);
     });
-    
+
     claimModalContainer.classList.remove('hidden');
 }
 
 async function approveWinner() {
     if (!isHost || !currentClaimData) return;
     const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId);
-    
+
     try {
         const playersRef = collection(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId, 'players');
         const playersSnapshot = await getDocs(playersRef);
         const playerCount = playersSnapshot.size;
-        
+
         const gameDoc = await getDoc(gameRef);
         const fee = gameDoc.data().fee || 0;
         const prize = (playerCount * fee) * 0.8;
@@ -785,7 +905,7 @@ async function approveWinner() {
             finalPrize: prize,
             finalHouseCut: houseCut
         }, { merge: true });
-        
+
         claimModalContainer.classList.add('hidden');
     } catch (error) {
         console.error("Error approving winner: ", error);
@@ -797,8 +917,9 @@ async function rejectClaim() {
     if (!isHost || !currentClaimId) return;
     const claimRef = doc(db, 'artifacts', appId, 'public', 'data', 'bingoGames', gameId, 'claims', currentClaimId);
     try {
-        await deleteDoc(claimRef); 
+        await deleteDoc(claimRef);
         claimModalContainer.classList.add('hidden');
+        showToast('Claim rejected and removed', 'info');
     } catch (error) {
         console.error("Error rejecting claim: ", error);
         showModal('Error', `Failed to reject claim: ${error.message}`);
@@ -809,21 +930,25 @@ function showGameUI() {
     gameSetupArea.classList.add('hidden');
     gameArea.classList.remove('hidden');
     gameStateDiv.classList.remove('hidden');
-    currentGameIdDisplay.textContent = `Game ID: ${gameId}`;
+    currentGameIdDisplay.textContent = gameId;
+    gameInfoDiv.classList.remove('hidden');
+
     if (isHost) {
         hostViewDiv.classList.remove('hidden');
         playerViewDiv.classList.add('hidden');
         hostLobbyView.classList.remove('hidden');
         hostInGameView.classList.add('hidden');
-        gameInfoDiv.classList.add('hidden');
     } else {
         hostViewDiv.classList.add('hidden');
         playerViewDiv.classList.remove('hidden');
         playerLobbyView.classList.remove('hidden');
         playerInGameView.classList.add('hidden');
-        gameInfoDiv.classList.add('hidden');
-        if (!gameCard) {
-            createBingoCard(); 
+
+        // Restore saved card for this room or create a fresh one
+        if (!loadCardState(gameId)) {
+            createBingoCard(true);
+        } else {
+            renderBingoCard();
         }
     }
 }
@@ -834,8 +959,7 @@ startGameBtn.addEventListener('click', startGame);
 drawNumberBtn.addEventListener('click', drawNumber);
 endGameBtn.addEventListener('click', endGame);
 leaveGameBtn.addEventListener('click', leaveGame);
-leaveGameBtnLobby.addEventListener('click', leaveGame);
-generateCardBtn.addEventListener('click', createBingoCard);
+generateCardBtn.addEventListener('click', () => createBingoCard(false));
 bingoBtn.addEventListener('click', claimBingo);
 
 claimApproveBtn.addEventListener('click', approveWinner);
@@ -847,28 +971,26 @@ function resetGame() {
     if (unsubscribeClaimsListener) unsubscribeClaimsListener();
     if (unsubscribePlayersListener) unsubscribePlayersListener();
     if (unsubscribeJoinRequestsListener) unsubscribeJoinRequestsListener();
-    
+
     gameStateDiv.classList.add('hidden');
     hostViewDiv.classList.add('hidden');
     playerViewDiv.classList.add('hidden');
     gameArea.classList.add('hidden');
     gameSetupArea.classList.remove('hidden');
     gameCard = null;
-    markedNumbers = new Set();
+    markedNumbers = new Set(['FREE']);
     gameId = null;
+    gameStatus = 'waiting';
     isHost = false;
     calledNumbers = [];
     renderCalledNumbers([]);
     bingoCardContainer.innerHTML = '';
     gameIdInput.value = '';
-    feeInput.value = '';
-    // IMPROVEMENT: Reset Payment Fields
-    paymentInput.value = '';
     lobbyPaymentDisplay.classList.add('hidden');
 
     myJoinRequestId = null;
     playerWaitingMessage.classList.add('hidden');
-    playerLobbyTitle.textContent = 'Waiting for Host...';
+    playerLobbyTitle.innerHTML = '<i class="fas fa-hourglass-half animate-spin text-sm"></i><span>Waiting for Host...</span>';
 
     if (!isHostUser) {
         createGameBtn.classList.add('hidden');
@@ -877,15 +999,19 @@ function resetGame() {
 }
 
 // --- Initialization ---
-window.onload = async function() {
+window.onload = async function () {
     loadingSpinner.classList.remove('hidden');
+    const savedName = localStorage.getItem('habesha_bingo_username');
+    if (savedName && usernameInput) {
+        usernameInput.value = savedName;
+    }
+
     try {
-        const authResult = await signInAnonymously(auth);
+        await signInAnonymously(auth);
         userId = auth.currentUser.uid;
-        authInfo.textContent = `You are authenticated with User ID: ${userId}`;
+        authInfo.textContent = `User ID: ${userId}`;
 
         try {
-            console.log("Checking for host with user ID:", userId);
             const hostRef = doc(db, 'hosts', userId);
             const hostDoc = await getDoc(hostRef);
             if (hostDoc.exists()) {
@@ -897,7 +1023,6 @@ window.onload = async function() {
         } catch (e) {
             console.error("Error checking host status: ", e);
         }
-
     } catch (error) {
         console.error("Authentication error: ", error);
         showModal('Authentication Error', `Failed to authenticate with Firebase: ${error.message}`);
