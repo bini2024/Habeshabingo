@@ -103,7 +103,7 @@
         </header>
         
         <!-- Setup / Lobby Entry Area -->
-        <main id="game-setup-area" class="space-y-5">
+        <main id="game-setup-area" class="space-y-4">
             <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end bg-slate-800/40 p-5 rounded-2xl border border-slate-700/50">
                 <div class="sm:col-span-4 space-y-1.5 text-left">
                     <label for="username-input" class="block text-xs font-bold uppercase tracking-wider text-slate-300">Your Name</label>
@@ -129,19 +129,24 @@
                         <span>Join</span>
                     </button>
                     <button id="create-game-btn" class="flex-1 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white py-2.5 px-4 rounded-xl text-base font-bold shadow-lg shadow-indigo-600/25 transition-all hidden">
-                        <i class="fas fa-plus mr-1"></i> Host
+                        <i class="fas fa-plus mr-1"></i> Create Room
                     </button>
                 </div>
             </div>
             
-            <!-- Host Settings -->
+            <!-- Host Settings (Visible when Host PIN is unlocked) -->
             <div id="host-setup" class="space-y-4 hidden bg-slate-800/50 p-5 rounded-2xl border border-indigo-500/30">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-2 text-indigo-400">
                         <i class="fas fa-sliders-h"></i>
                         <h3 class="font-bold text-base sm:text-lg text-white">Host Game Configuration</h3>
                     </div>
-                    <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Host Mode</span>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Host Unlocked</span>
+                        <button id="lock-host-btn" class="text-xs text-slate-400 hover:text-rose-400 px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-700 transition-colors" title="Exit Host Mode">
+                            <i class="fas fa-lock mr-1"></i>Lock
+                        </button>
+                    </div>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="space-y-1.5 text-left">
@@ -160,6 +165,25 @@
                                    class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950/90 text-white placeholder-slate-500 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
                         </div>
                     </div>
+                </div>
+                <p class="text-xs text-slate-400 text-left">
+                    <i class="fas fa-info-circle text-indigo-400 mr-1"></i>
+                    <strong>Tip:</strong> Fill in the Fee and E-Transfer above and click <strong>Create Room</strong>, or enter an existing <strong>Room Code</strong> and click <strong>Join</strong> to take over host controls on this device.
+                </p>
+            </div>
+
+            <!-- Host PIN Access Bar -->
+            <div id="host-pin-bar" class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 rounded-xl bg-slate-900/60 border border-slate-800/80">
+                <div class="flex items-center space-x-2 text-xs text-slate-400">
+                    <i class="fas fa-key text-indigo-400"></i>
+                    <span>Hosting a game? Unlock Host Controls with your PIN.</span>
+                </div>
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <input type="password" id="host-pin-input" placeholder="Enter Host PIN" maxlength="12"
+                           class="flex-1 sm:w-36 px-3 py-1.5 rounded-lg bg-slate-950 text-white text-xs border border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <button id="unlock-host-btn" class="bg-slate-800 hover:bg-indigo-600 text-slate-200 hover:text-white px-3.5 py-1.5 rounded-lg text-xs font-bold border border-slate-700 transition-all whitespace-nowrap">
+                        Unlock Host
+                    </button>
                 </div>
             </div>
         </main>
