@@ -10,32 +10,32 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="style.css">
-    <style>
-        body { font-family: 'Outfit', sans-serif; }
-    </style>
 </head>
-<body class="bg-slate-950 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/40 via-slate-900 to-slate-950 text-gray-100 min-h-screen flex items-center justify-center p-4 sm:p-6 antialiased selection:bg-blue-500 selection:text-white">
+<body class="bg-slate-950 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/40 via-slate-900 to-slate-950 text-gray-100 min-h-screen flex items-center justify-center p-3 sm:p-6 antialiased selection:bg-blue-500 selection:text-white">
     
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-xs w-full pointer-events-none"></div>
+
     <!-- Loading Overlay -->
-    <div id="loading-spinner" class="fixed inset-0 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm z-50 transition-opacity duration-300">
+    <div id="loading-spinner" class="fixed inset-0 flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-md z-50 transition-opacity duration-300">
         <div class="relative flex items-center justify-center">
             <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
             <div class="absolute animate-ping rounded-full h-8 w-8 bg-blue-400/30"></div>
         </div>
-        <p class="mt-4 text-sm font-medium text-blue-300 tracking-widest uppercase animate-pulse">Loading Game...</p>
+        <p class="mt-4 text-sm font-semibold text-blue-300 tracking-widest uppercase animate-pulse">Loading Habesha Bingo...</p>
     </div>
     
     <!-- General Alert Modal -->
     <div id="modal-container" class="modal-container fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
         <div class="modal-backdrop fixed inset-0 bg-slate-950/75 backdrop-blur-sm transition-opacity"></div>
-        <div class="modal-body relative bg-slate-800/95 border border-slate-700 rounded-2xl shadow-2xl p-6 sm:p-8 z-10 w-full max-w-sm text-center transform transition-all">
+        <div class="modal-body relative bg-slate-900/95 border border-slate-700/80 rounded-2xl shadow-2xl p-6 sm:p-8 z-10 w-full max-w-sm text-center transform transition-all">
             <div class="w-12 h-12 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center mx-auto mb-4 text-blue-400">
                 <i class="fas fa-bell text-xl"></i>
             </div>
             <h3 id="modal-title" class="text-2xl font-extrabold mb-2 text-white tracking-tight"></h3>
             <p id="modal-message" class="mb-6 text-slate-300 text-sm sm:text-base leading-relaxed"></p>
             <div class="flex justify-center">
-                <button id="modal-ok-btn" class="btn btn-primary w-full bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white py-2.5 px-6 rounded-xl text-base font-bold shadow-lg shadow-blue-600/30 transition-all">
+                <button id="modal-ok-btn" class="w-full bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white py-2.5 px-6 rounded-xl text-base font-bold shadow-lg shadow-blue-600/30 transition-all">
                     OK
                 </button>
             </div>
@@ -45,30 +45,40 @@
     <!-- Verify Bingo Claim Modal -->
     <div id="claim-modal-container" class="modal-container fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
         <div class="modal-backdrop fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity"></div>
-        <div class="modal-body relative bg-slate-800/95 border border-slate-700 rounded-2xl shadow-2xl p-6 z-10 w-full max-w-md text-center">
-            <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold uppercase tracking-wider mb-2">
+        <div class="modal-body relative bg-slate-900/95 border border-slate-700 rounded-2xl shadow-2xl p-5 sm:p-6 z-10 w-full max-w-md text-center max-h-[92vh] overflow-y-auto">
+            <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold uppercase tracking-wider mb-2">
                 <i class="fas fa-trophy"></i>
-                <span>Action Required</span>
+                <span>Host Verification</span>
             </div>
-            <h3 id="claim-modal-title" class="text-2xl font-extrabold mb-4 text-white">Verify Bingo Claim</h3>
+            <h3 id="claim-modal-title" class="text-2xl font-extrabold mb-2 text-white">Verify Bingo Claim</h3>
+            <div id="claim-verification-badge" class="mb-4"></div>
             
             <div class="text-left space-y-4">
                 <div>
-                    <p class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">Player's Card</p>
-                    <div id="claim-modal-card" class="bingo-card bg-slate-900/90 p-3 rounded-xl border border-slate-700 shadow-inner"></div>
+                    <p class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">Player's Card (Green = Winning Pattern)</p>
+                    <div class="bingo-board-wrapper bg-slate-950/90 p-3 rounded-xl border border-slate-800 shadow-inner">
+                        <div class="bingo-header-grid mb-2">
+                            <span class="bingo-col-b">B</span>
+                            <span class="bingo-col-i">I</span>
+                            <span class="bingo-col-n">N</span>
+                            <span class="bingo-col-g">G</span>
+                            <span class="bingo-col-o">O</span>
+                        </div>
+                        <div id="claim-modal-card" class="bingo-card"></div>
+                    </div>
                 </div>
                 <div>
-                    <p class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">Called Numbers</p>
-                    <div id="claim-modal-called-numbers" class="host-view max-h-32 overflow-y-auto p-3 bg-slate-900/60 rounded-xl border border-slate-700/80"></div>
+                    <p class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">Called Numbers (<span id="claim-called-count">0</span>)</p>
+                    <div id="claim-modal-called-numbers" class="host-called-grid max-h-28 overflow-y-auto p-3 bg-slate-950/60 rounded-xl border border-slate-800"></div>
                 </div>
             </div>
 
             <div class="grid grid-cols-2 gap-3 mt-6">
-                <button id="claim-reject-btn" class="btn btn-danger bg-rose-600 hover:bg-rose-500 active:scale-[0.98] text-white py-2.5 px-4 rounded-xl text-base font-bold shadow-lg shadow-rose-600/20 transition-all flex items-center justify-center space-x-2">
+                <button id="claim-reject-btn" class="bg-rose-600 hover:bg-rose-500 active:scale-[0.98] text-white py-2.5 px-4 rounded-xl text-base font-bold shadow-lg shadow-rose-600/20 transition-all flex items-center justify-center space-x-2">
                     <i class="fas fa-times"></i>
                     <span>Reject</span>
                 </button>
-                <button id="claim-approve-btn" class="btn btn-approve bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white py-2.5 px-4 rounded-xl text-base font-bold shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center space-x-2">
+                <button id="claim-approve-btn" class="bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white py-2.5 px-4 rounded-xl text-base font-bold shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center space-x-2">
                     <i class="fas fa-check"></i>
                     <span>Approve Winner</span>
                 </button>
@@ -77,74 +87,77 @@
     </div>
 
     <!-- Main Container -->
-    <div class="container bg-slate-900/80 backdrop-blur-xl border border-slate-800 p-6 sm:p-8 rounded-3xl shadow-2xl space-y-8 max-w-5xl w-full">
+    <div class="bg-slate-900/80 backdrop-blur-xl border border-slate-800/90 p-4 sm:p-8 rounded-3xl shadow-2xl space-y-6 max-w-5xl w-full my-auto">
         
         <!-- Header -->
-        <header class="text-center space-y-2 border-b border-slate-800/80 pb-6">
+        <header class="text-center space-y-2 border-b border-slate-800/80 pb-5">
             <div class="inline-flex items-center justify-center space-x-3">
-                <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30 text-white font-extrabold text-xl">
+                <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-blue-500/30 text-white font-extrabold text-2xl">
                     B
                 </span>
-                <h1 class="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-emerald-300 drop-shadow-sm tracking-tight">
+                <h1 class="text-3xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-emerald-300 tracking-tight">
                     Habesha Bingo
                 </h1>
             </div>
-            <p id="auth-info" class="text-xs sm:text-sm text-slate-400 font-mono" hidden></p>
+            <p id="auth-info" class="text-xs text-slate-500 font-mono" hidden></p>
         </header>
         
         <!-- Setup / Lobby Entry Area -->
-        <main id="game-setup-area" class="space-y-6">
-            <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end bg-slate-800/50 p-5 rounded-2xl border border-slate-700/50">
+        <main id="game-setup-area" class="space-y-5">
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end bg-slate-800/40 p-5 rounded-2xl border border-slate-700/50">
                 <div class="sm:col-span-4 space-y-1.5 text-left">
-                    <label for="username-input" class="block text-xs font-bold uppercase tracking-wider text-slate-300">Username</label>
+                    <label for="username-input" class="block text-xs font-bold uppercase tracking-wider text-slate-300">Your Name</label>
                     <div class="relative">
                         <i class="fas fa-user absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                        <input type="text" id="username-input" placeholder="e.g., JaneDoe" required
-                               class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/90 text-white placeholder-slate-500 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                        <input type="text" id="username-input" placeholder="e.g., Dawit" maxlength="20" required
+                               class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950/90 text-white placeholder-slate-500 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                     </div>
                 </div>
 
                 <div class="sm:col-span-4 space-y-1.5 text-left">
-                    <label for="game-id-input" class="block text-xs font-bold uppercase tracking-wider text-slate-300">Game ID</label>
+                    <label for="game-id-input" class="block text-xs font-bold uppercase tracking-wider text-slate-300">Room Code</label>
                     <div class="relative">
                         <i class="fas fa-hashtag absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                        <input type="text" id="game-id-input" placeholder="e.g., BINGO123"
-                               class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/90 text-white placeholder-slate-500 border border-slate-700 font-mono uppercase focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                        <input type="text" id="game-id-input" placeholder="e.g., BINGO-1234"
+                               class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950/90 text-white placeholder-slate-500 border border-slate-700 font-mono uppercase focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                     </div>
                 </div>
 
-                <div class="sm:col-span-4 flex items-center space-x-2 pt-2 sm:pt-0">
-                    <button id="join-game-btn" class="btn btn-primary flex-1 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white py-2.5 px-5 rounded-xl text-base font-bold shadow-lg shadow-blue-600/25 transition-all flex items-center justify-center space-x-2">
+                <div class="sm:col-span-4 flex items-center gap-2 pt-2 sm:pt-0">
+                    <button id="join-game-btn" class="flex-1 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white py-2.5 px-4 rounded-xl text-base font-bold shadow-lg shadow-blue-600/25 transition-all flex items-center justify-center space-x-2">
                         <i class="fas fa-sign-in-alt"></i>
-                        <span>Join Game</span>
+                        <span>Join</span>
                     </button>
-                    <button id="create-game-btn" class="btn btn-primary flex-1 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white py-2.5 px-5 rounded-xl text-base font-bold shadow-lg shadow-indigo-600/25 transition-all hidden">
-                        Create Game
+                    <button id="create-game-btn" class="flex-1 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white py-2.5 px-4 rounded-xl text-base font-bold shadow-lg shadow-indigo-600/25 transition-all hidden">
+                        <i class="fas fa-plus mr-1"></i> Host
                     </button>
                 </div>
             </div>
             
             <!-- Host Settings -->
-            <div id="host-setup" class="space-y-4 hidden bg-slate-800/60 p-5 rounded-2xl border border-slate-700/60">
-                <div class="flex items-center space-x-2 text-blue-400">
-                    <i class="fas fa-sliders-h"></i>
-                    <h3 class="font-bold text-lg text-white">Host Settings</h3>
+            <div id="host-setup" class="space-y-4 hidden bg-slate-800/50 p-5 rounded-2xl border border-indigo-500/30">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2 text-indigo-400">
+                        <i class="fas fa-sliders-h"></i>
+                        <h3 class="font-bold text-base sm:text-lg text-white">Host Game Configuration</h3>
+                    </div>
+                    <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Host Mode</span>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="space-y-1.5 text-left">
-                        <label for="fee-input" class="block text-xs font-bold uppercase tracking-wider text-slate-300">Player Fee ($)</label>
+                        <label for="fee-input" class="block text-xs font-bold uppercase tracking-wider text-slate-300">Entry Fee Per Player ($)</label>
                         <div class="relative">
                             <i class="fas fa-dollar-sign absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                            <input type="number" id="fee-input" placeholder="e.g., 5" min="1"
-                                   class="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900/90 text-white placeholder-slate-500 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                            <input type="number" id="fee-input" placeholder="e.g., 10" min="1" step="0.5"
+                                   class="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-950/90 text-white placeholder-slate-500 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
                         </div>
                     </div>
                     <div class="space-y-1.5 text-left">
-                        <label for="payment-input" class="block text-xs font-bold uppercase tracking-wider text-slate-300">Payment Info (E-transfer)</label>
+                        <label for="payment-input" class="block text-xs font-bold uppercase tracking-wider text-slate-300">E-Transfer / Payment Details</label>
                         <div class="relative">
                             <i class="fas fa-envelope absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                            <input type="text" id="payment-input" placeholder="e.g., email@example.com"
-                                   class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/90 text-white placeholder-slate-500 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                            <input type="text" id="payment-input" placeholder="e.g., pay@example.com"
+                                   class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950/90 text-white placeholder-slate-500 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
                         </div>
                     </div>
                 </div>
@@ -154,22 +167,27 @@
         <!-- Active Game Area -->
         <main id="game-area" class="space-y-6 hidden">
             <div id="game-state" class="hidden">
-                <div class="bg-slate-800/40 border border-slate-800 rounded-2xl p-4 sm:p-6 text-center space-y-6">
+                <div class="bg-slate-800/30 border border-slate-800 rounded-2xl p-4 sm:p-6 text-center space-y-6">
                     
-                    <!-- Top Bar: Game Code & Payment Banner -->
-                    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-800 pb-4">
-                        <div class="inline-flex items-center space-x-3 bg-slate-900 px-4 py-2 rounded-xl border border-slate-700/80 shadow-inner">
-                            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Room Code:</span>
-                            <p id="current-game-id" class="text-lg sm:text-xl font-extrabold text-blue-400 font-mono tracking-wider"></p>
-                            <button id="copy-id-btn" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors" title="Copy Code">
-                                <i class="fas fa-copy"></i>
-                            </button>
+                    <!-- Top Bar: Game Code, Status Badge & Payment Banner -->
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-slate-800 pb-4">
+                        <div class="flex items-center gap-2.5 flex-wrap justify-center">
+                            <div class="inline-flex items-center space-x-2.5 bg-slate-950 px-3.5 py-2 rounded-xl border border-slate-700/80">
+                                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Room:</span>
+                                <span id="current-game-id" class="text-base sm:text-lg font-extrabold text-blue-400 font-mono tracking-wider"></span>
+                                <button id="copy-id-btn" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors" title="Copy Room Code">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                            <span id="game-status-badge" class="text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                Lobby
+                            </span>
                         </div>
 
-                        <div id="lobby-payment-display" class="bg-emerald-950/60 border border-emerald-500/40 px-4 py-2 rounded-xl hidden">
-                            <p class="text-emerald-300 text-sm font-medium flex items-center justify-center space-x-2">
+                        <div id="lobby-payment-display" class="bg-emerald-950/60 border border-emerald-500/40 px-3.5 py-2 rounded-xl hidden">
+                            <p class="text-emerald-300 text-xs sm:text-sm font-medium flex items-center justify-center space-x-2">
                                 <i class="fas fa-wallet text-emerald-400"></i>
-                                <span>Send E-Transfer to:</span>
+                                <span>E-Transfer:</span>
                                 <span id="payment-info-text" class="text-white font-bold underline decoration-emerald-500/50 select-all"></span>
                             </p>
                         </div>
@@ -181,170 +199,192 @@
                         <!-- HOST VIEW -->
                         <div id="host-view" class="space-y-5 w-full lg:w-7/12 hidden">
                             <!-- Host Lobby -->
-                            <div id="host-lobby-view" class="space-y-5 bg-slate-900/60 p-5 rounded-2xl border border-slate-800">
-                                <div class="p-4 bg-slate-950/70 rounded-xl border border-amber-500/20">
+                            <div id="host-lobby-view" class="space-y-5 bg-slate-900/70 p-5 rounded-2xl border border-slate-800">
+                                <div class="p-4 bg-slate-950/70 rounded-xl border border-amber-500/25 text-left">
                                     <div class="flex items-center justify-between mb-2">
-                                        <h4 class="text-base font-bold text-amber-400 flex items-center space-x-2">
+                                        <h4 class="text-sm font-bold uppercase tracking-wider text-amber-400 flex items-center space-x-2">
                                             <i class="fas fa-user-clock"></i>
-                                            <span>Waiting Room</span>
+                                            <span>Waiting Room Requests</span>
                                         </h4>
                                     </div>
                                     <ul id="join-requests-list" class="space-y-2 mt-2 max-h-48 overflow-y-auto text-sm"></ul>
                                 </div>
 
                                 <div class="text-left space-y-2">
-                                    <h4 class="text-base font-bold text-blue-300 flex items-center space-x-2">
+                                    <h4 class="text-sm font-bold uppercase tracking-wider text-blue-400 flex items-center space-x-2">
                                         <i class="fas fa-users"></i>
-                                        <span>Joined Players (<span id="player-count">0</span>)</span>
+                                        <span>Approved Players (<span id="player-count">0</span>)</span>
                                     </h4>
-                                    <ul id="players-ul" class="list-disc list-inside space-y-1.5 text-left max-h-48 overflow-y-auto p-3.5 bg-slate-950/50 rounded-xl border border-slate-800 text-sm text-slate-200"></ul>
+                                    <ul id="players-ul" class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-left max-h-48 overflow-y-auto p-3 bg-slate-950/50 rounded-xl border border-slate-800 text-sm text-slate-200"></ul>
                                 </div>
 
-                                <button id="start-game-btn" class="btn btn-primary bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white py-3 px-6 rounded-xl text-lg font-bold w-full shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center space-x-2">
+                                <button id="start-game-btn" class="bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white py-3.5 px-6 rounded-xl text-lg font-bold w-full shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center space-x-2">
                                     <i class="fas fa-play"></i>
-                                    <span>Start Game</span>
+                                    <span>Start Bingo Game</span>
                                 </button>
                             </div>
 
                             <!-- Host In-Game -->
-                            <div id="host-in-game-view" class="space-y-5 bg-slate-900/60 p-5 rounded-2xl border border-slate-800 hidden">
-                                <div class="flex flex-wrap items-center justify-between gap-4 bg-slate-950/60 p-4 rounded-xl border border-slate-800/80">
-                                    <button id="draw-number-btn" class="btn btn-primary flex-1 sm:flex-initial bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white py-3 px-6 rounded-xl text-lg font-bold shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center space-x-2">
+                            <div id="host-in-game-view" class="space-y-5 bg-slate-900/70 p-5 rounded-2xl border border-slate-800 hidden">
+                                <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-950/70 p-4 rounded-xl border border-slate-800">
+                                    <button id="draw-number-btn" class="flex-1 sm:flex-initial bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white py-3 px-6 rounded-xl text-lg font-bold shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center space-x-2">
                                         <i class="fas fa-random"></i>
-                                        <span>Draw Number</span>
+                                        <span>Draw Ball</span>
                                     </button>
 
-                                    <label for="caller-toggle" class="inline-flex items-center space-x-3 cursor-pointer select-none bg-slate-900 px-3.5 py-2 rounded-xl border border-slate-800">
+                                    <label for="caller-toggle" class="inline-flex items-center space-x-3 cursor-pointer select-none bg-slate-900 px-3.5 py-2.5 rounded-xl border border-slate-800">
                                         <i class="fas fa-volume-up text-blue-400 text-sm"></i>
                                         <span class="text-slate-200 text-sm font-semibold">Voice Caller</span>
-                                        <input type="checkbox" id="caller-toggle" class="form-checkbox h-5 w-5 rounded text-blue-600 bg-slate-800 border-slate-600 focus:ring-blue-500 focus:ring-offset-slate-900">
+                                        <input type="checkbox" id="caller-toggle" class="h-5 w-5 rounded text-blue-600 bg-slate-800 border-slate-600 focus:ring-blue-500">
                                     </label>
                                 </div>
 
                                 <!-- Current Drawn Ball -->
-                                <div class="flex flex-col items-center justify-center py-2">
-                                    <span class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Last Called</span>
-                                    <div id="last-called-number" class="w-24 h-24 rounded-full bg-gradient-to-br from-blue-400 via-blue-600 to-indigo-800 flex items-center justify-center font-extrabold text-4xl text-white border-4 border-blue-300/80 shadow-[0_0_30px_rgba(59,130,246,0.5)]">
+                                <div class="flex flex-col items-center justify-center py-1">
+                                    <span class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Current Call</span>
+                                    <div id="last-called-number" class="w-28 h-28 rounded-full bg-gradient-to-br from-blue-400 via-blue-600 to-indigo-900 flex items-center justify-center font-extrabold text-3xl sm:text-4xl text-white border-4 border-blue-300/80 shadow-[0_0_30px_rgba(59,130,246,0.5)]">
                                         --
                                     </div>
                                 </div>
 
-                                <!-- Called Numbers Board -->
-                                <div class="space-y-1.5 text-left">
-                                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Called Board</span>
-                                    <div class="grid grid-cols-5 sm:grid-cols-10 gap-2 p-3 bg-slate-950/60 rounded-xl border border-slate-800/80">
-                                        <div id="called-numbers-display" class="col-span-full host-view"></div>
-                                    </div>
-                                </div>
-
                                 <!-- Claims Queue -->
-                                <div id="bingo-claims-list" class="p-4 bg-rose-950/20 border border-rose-500/30 rounded-xl max-h-48 overflow-y-auto text-left">
-                                    <h4 class="text-sm font-bold uppercase tracking-wider text-rose-400 mb-2 flex items-center space-x-2">
-                                        <i class="fas fa-exclamation-circle"></i>
+                                <div id="bingo-claims-list" class="p-4 bg-rose-950/30 border border-rose-500/30 rounded-xl max-h-48 overflow-y-auto text-left">
+                                    <h4 class="text-xs font-bold uppercase tracking-wider text-rose-400 mb-2 flex items-center space-x-2">
+                                        <i class="fas fa-bell"></i>
                                         <span>Live Bingo Claims</span>
                                     </h4>
                                     <ul id="claims-ul" class="space-y-2 text-sm"></ul>
                                 </div>
 
-                                <button id="end-game-btn" class="btn btn-danger bg-rose-600/90 hover:bg-rose-600 text-white py-2.5 px-6 rounded-xl text-base font-bold w-full transition-all flex items-center justify-center space-x-2">
+                                <!-- Called Numbers Board -->
+                                <div class="space-y-2 text-left">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Called Balls History</span>
+                                        <span id="host-called-counter" class="text-xs font-mono font-bold text-blue-400">0 / 75</span>
+                                    </div>
+                                    <div id="called-numbers-display" class="host-called-grid p-3 bg-slate-950/70 rounded-xl border border-slate-800 max-h-56 overflow-y-auto"></div>
+                                </div>
+
+                                <button id="end-game-btn" class="bg-rose-600/80 hover:bg-rose-600 text-white py-2.5 px-6 rounded-xl text-sm font-bold w-full transition-all flex items-center justify-center space-x-2">
                                     <i class="fas fa-stop-circle"></i>
-                                    <span>End Game</span>
+                                    <span>End & Cancel Game</span>
                                 </button>
                             </div>
                         </div>
                         
                         <!-- PLAYER VIEW -->
                         <div id="player-view" class="space-y-5 w-full lg:w-7/12 hidden">
-                            <!-- Player Lobby -->
-                            <div id="player-lobby-view" class="space-y-4 bg-slate-900/60 p-5 rounded-2xl border border-slate-800">
-                                <h4 id="player-lobby-title" class="text-xl font-bold text-blue-300 flex items-center justify-center space-x-2">
-                                    <i class="fas fa-hourglass-half animate-spin text-base"></i>
-                                    <span>Waiting for Host...</span>
-                                </h4>
+                            <!-- Player Lobby Banner -->
+                            <div id="player-lobby-view" class="space-y-4 bg-slate-900/70 p-4 sm:p-5 rounded-2xl border border-slate-800">
+                                <div class="flex flex-col sm:flex-row items-center justify-between gap-2">
+                                    <h4 id="player-lobby-title" class="text-lg font-bold text-blue-300 flex items-center space-x-2">
+                                        <i class="fas fa-hourglass-half animate-spin text-sm"></i>
+                                        <span>Waiting for Host...</span>
+                                    </h4>
+                                    <button id="generate-card-btn" class="bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white py-2 px-4 rounded-xl text-sm font-bold shadow-lg shadow-blue-600/25 transition-all flex items-center space-x-2">
+                                        <i class="fas fa-dice"></i>
+                                        <span>Roll New Card</span>
+                                    </button>
+                                </div>
 
-                                <div id="player-waiting-message" class="p-5 bg-slate-950/80 border border-amber-500/30 rounded-xl text-center space-y-2 hidden">
-                                    <p class="text-amber-400 font-bold text-lg">Request Sent</p>
-                                    <p class="text-slate-300 text-sm">Please wait for the host to approve your entry.</p>
-                                    <button id="cancel-join-request-btn" class="btn btn-danger bg-rose-600 hover:bg-rose-500 text-white py-1.5 px-4 rounded-lg text-xs font-bold uppercase tracking-wider mt-2 transition-all">
+                                <div id="player-waiting-message" class="p-4 bg-slate-950/90 border border-amber-500/30 rounded-xl text-center space-y-2 hidden">
+                                    <p class="text-amber-400 font-bold text-base">Join Request Sent</p>
+                                    <p class="text-slate-300 text-xs sm:text-sm">Waiting for the host to approve your entry. You can preview your card below!</p>
+                                    <button id="cancel-join-request-btn" class="bg-rose-600/90 hover:bg-rose-500 text-white py-1.5 px-4 rounded-lg text-xs font-bold uppercase tracking-wider mt-1 transition-all">
                                         Cancel Request
                                     </button>
                                 </div>
 
                                 <div class="text-left space-y-1.5">
-                                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Players in Lobby</span>
-                                    <ul id="players-ul-player" class="list-disc list-inside space-y-1 text-left max-h-48 overflow-y-auto p-3.5 bg-slate-950/50 rounded-xl border border-slate-800 text-sm text-slate-200"></ul>
+                                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Players in Room</span>
+                                    <ul id="players-ul-player" class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-left max-h-32 overflow-y-auto p-3 bg-slate-950/50 rounded-xl border border-slate-800 text-xs sm:text-sm text-slate-200"></ul>
                                 </div>
-
-                                <button id="generate-card-btn" class="btn btn-primary bg-blue-600 hover:bg-blue-500 active:scale-[0.99] text-white py-3 px-6 rounded-xl text-base font-bold w-full shadow-lg shadow-blue-600/25 transition-all flex items-center justify-center space-x-2">
-                                    <i class="fas fa-dice"></i>
-                                    <span>Generate New Card</span>
-                                </button>
-                                <button id="leave-game-btn-lobby" class="btn btn-danger bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white py-2.5 px-6 rounded-xl text-sm font-bold w-full border border-slate-700 transition-all">
-                                    Leave Lobby
-                                </button>
                             </div>
 
-                            <!-- Player In-Game -->
-                            <div id="player-in-game-view" class="space-y-5 bg-slate-900/60 p-4 sm:p-6 rounded-2xl border border-slate-800 hidden">
-                                <div class="flex flex-col items-center justify-center">
-                                    <span class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1.5">Current Ball</span>
-                                    <div id="last-called-number-player" class="w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 via-blue-600 to-indigo-800 flex items-center justify-center font-extrabold text-3xl text-white border-4 border-blue-300/80 shadow-[0_0_25px_rgba(59,130,246,0.45)]">
-                                        --
+                            <!-- Player Live Caller Bar (Visible when game starts) -->
+                            <div id="player-in-game-view" class="bg-slate-900/70 p-4 rounded-2xl border border-slate-800 hidden">
+                                <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                    <div class="flex items-center space-x-4">
+                                        <div class="text-left">
+                                            <span class="block text-[11px] font-bold uppercase tracking-widest text-slate-400">Current Ball</span>
+                                            <span id="player-called-count" class="text-xs font-mono text-blue-400">0 / 75 called</span>
+                                        </div>
+                                        <div id="last-called-number-player" class="w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 via-blue-600 to-indigo-900 flex items-center justify-center font-extrabold text-2xl text-white border-4 border-blue-300/80 shadow-[0_0_25px_rgba(59,130,246,0.45)]">
+                                            --
+                                        </div>
+                                    </div>
+                                    <div class="w-full sm:w-auto text-center sm:text-right">
+                                        <span class="block text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Recent Calls</span>
+                                        <div id="recent-calls-player" class="flex items-center justify-center sm:justify-end gap-1.5 min-h-[2.25rem]">
+                                            <span class="text-xs text-slate-500 italic">No balls drawn yet</span>
+                                        </div>
                                     </div>
                                 </div>
+                            </div>
 
-                                <div id="bingo-card" class="bingo-card bg-slate-950/90 p-2.5 sm:p-3 rounded-2xl border-2 border-slate-700/80 shadow-inner"></div>
+                            <!-- Shared Player Bingo Board (Visible in Lobby & In-Game) -->
+                            <div class="bg-slate-900/70 p-3 sm:p-5 rounded-2xl border border-slate-800 space-y-4">
+                                <div class="bingo-board-wrapper bg-slate-950/90 p-2.5 sm:p-3.5 rounded-2xl border border-slate-800 shadow-inner">
+                                    <div class="bingo-header-grid mb-2">
+                                        <span class="bingo-col-b">B</span>
+                                        <span class="bingo-col-i">I</span>
+                                        <span class="bingo-col-n">N</span>
+                                        <span class="bingo-col-g">G</span>
+                                        <span class="bingo-col-o">O</span>
+                                    </div>
+                                    <div id="bingo-card" class="bingo-card"></div>
+                                </div>
 
-                                <div class="pt-2">
-                                    <button id="bingo-btn" class="btn w-full sm:w-auto min-w-[220px] bg-gradient-to-r from-rose-500 via-red-500 to-amber-500 hover:from-rose-600 hover:to-amber-600 text-white py-3.5 px-8 rounded-2xl text-xl font-extrabold tracking-wider shadow-xl shadow-rose-500/30 transform hover:scale-105 active:scale-95 transition-all">
-                                        <i class="fas fa-bolt mr-1"></i> BINGO!
+                                <div id="bingo-action-wrapper" class="hidden pt-1">
+                                    <button id="bingo-btn" class="w-full bg-gradient-to-r from-rose-500 via-red-500 to-amber-500 hover:from-rose-600 hover:to-amber-600 text-white py-3.5 px-8 rounded-2xl text-xl font-extrabold tracking-wider shadow-xl shadow-rose-500/30 transform hover:scale-[1.01] active:scale-95 transition-all">
+                                        <i class="fas fa-bolt mr-1"></i> CLAIM BINGO!
                                     </button>
                                 </div>
                             </div>
 
-                            <button id="leave-game-btn" class="btn btn-danger bg-slate-800/80 hover:bg-rose-600 text-slate-300 hover:text-white py-2.5 px-6 rounded-xl text-sm font-bold w-full border border-slate-700/80 transition-all">
-                                Leave Game
+                            <button id="leave-game-btn" class="bg-slate-800/80 hover:bg-rose-600 text-slate-300 hover:text-white py-2.5 px-6 rounded-xl text-sm font-bold w-full border border-slate-700/80 transition-all">
+                                Leave Room
                             </button>
                         </div>
                         
                         <!-- SIDEBAR: RULES & PRIZE POOL -->
                         <div id="game-info" class="space-y-5 w-full lg:w-5/12 hidden">
                             <!-- Prize Pool Card -->
-                            <div id="prize-view" class="p-5 bg-gradient-to-br from-emerald-950/50 via-slate-900 to-slate-900 border border-emerald-500/30 rounded-2xl space-y-2 text-center relative overflow-hidden">
+                            <div id="prize-view" class="p-5 bg-gradient-to-br from-emerald-950/60 via-slate-900 to-slate-900 border border-emerald-500/30 rounded-2xl space-y-2 text-center relative overflow-hidden">
                                 <div class="inline-flex items-center space-x-1.5 text-emerald-400 text-xs font-bold uppercase tracking-widest">
                                     <i class="fas fa-coins"></i>
-                                    <span>Grand Prize Pool</span>
+                                    <span>Winner Prize Pool (80%)</span>
                                 </div>
-                                <p id="prize-amount" class="text-4xl sm:text-5xl font-extrabold text-emerald-400 drop-shadow-[0_2px_10px_rgba(52,211,153,0.25)]">--</p>
-                                <p id="fee-display" class="text-sm font-semibold text-slate-400 bg-slate-950/60 inline-block px-3 py-1 rounded-full border border-slate-800">Fee: --</p>
+                                <p id="prize-amount" class="text-4xl sm:text-5xl font-extrabold text-emerald-400 drop-shadow-[0_2px_10px_rgba(52,211,153,0.25)]">$0.00</p>
+                                <p id="fee-display" class="text-xs sm:text-sm font-semibold text-slate-300 bg-slate-950/70 inline-block px-3.5 py-1 rounded-full border border-slate-800">Entry Fee: --</p>
                             </div>
 
                             <!-- Rules Card -->
-                            <div id="rules-view" class="p-5 bg-slate-900/60 border border-slate-800 rounded-2xl space-y-3 text-left">
-                                <h4 class="text-lg font-bold text-white flex items-center space-x-2">
+                            <div id="rules-view" class="p-5 bg-slate-900/70 border border-slate-800 rounded-2xl space-y-3 text-left">
+                                <h4 class="text-base font-bold text-white flex items-center space-x-2">
                                     <i class="fas fa-book-open text-blue-400 text-sm"></i>
                                     <span>House Rules</span>
                                 </h4>
-                                <ul class="space-y-2.5 text-sm text-slate-300">
+                                <ul class="space-y-2.5 text-xs sm:text-sm text-slate-300">
                                     <li class="flex items-start space-x-2.5">
-                                        <i class="fas fa-check-circle text-blue-400 mt-1 text-xs"></i>
-                                        <span>Generate your Bingo card in the lobby before the game begins.</span>
+                                        <i class="fas fa-dice text-blue-400 mt-1 text-xs"></i>
+                                        <span>Preview and roll your favourite card in the lobby before the host starts.</span>
                                     </li>
                                     <li class="flex items-start space-x-2.5">
-                                        <i class="fas fa-check-circle text-blue-400 mt-1 text-xs"></i>
-                                        <span>Send the entry fee to the host via E-transfer.</span>
+                                        <i class="fas fa-wallet text-emerald-400 mt-1 text-xs"></i>
+                                        <span>Send the entry fee to the host's E-Transfer address shown above.</span>
                                     </li>
                                     <li class="flex items-start space-x-2.5">
-                                        <i class="fas fa-check-circle text-blue-400 mt-1 text-xs"></i>
-                                        <span>Tap numbers on your card to mark them as they are called.</span>
+                                        <i class="fas fa-hand-pointer text-indigo-400 mt-1 text-xs"></i>
+                                        <span>Tap numbers on your card as they are drawn to daub them.</span>
                                     </li>
                                     <li class="flex items-start space-x-2.5">
                                         <i class="fas fa-trophy text-amber-400 mt-1 text-xs"></i>
-                                        <span>Winning patterns: <strong class="text-white">Horizontal, Vertical, Diagonal, or 4 Corners</strong>.</span>
+                                        <span>Winning patterns: <strong class="text-white">Any Row, Column, Diagonal, or 4 Corners</strong>.</span>
                                     </li>
                                     <li class="flex items-start space-x-2.5">
                                         <i class="fas fa-bolt text-rose-400 mt-1 text-xs"></i>
-                                        <span>First player to hit <strong class="text-rose-400">BINGO!</strong> and pass verification takes the pot.</span>
+                                        <span>First player to hit <strong class="text-rose-400">CLAIM BINGO!</strong> and pass verification takes the pot.</span>
                                     </li>
                                 </ul>
                             </div>
